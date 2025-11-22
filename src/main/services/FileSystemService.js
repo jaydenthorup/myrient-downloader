@@ -85,9 +85,22 @@ class FileSystemService {
    */
   static async isAlreadyExtracted(extractionPath, archiveFilename) {
     try {
-      if (fs.existsSync(extractionPath) && fs.lstatSync(extractionPath).isDirectory()) {
-        const filesInDir = await fs.promises.readdir(extractionPath);
-        if (filesInDir.length > 0 && filesInDir.some(f => f.toLowerCase() !== archiveFilename.toLowerCase())) {
+      const archiveBaseName = path.parse(archiveFilename).name;
+      const extractionPathEnd = path.basename(extractionPath);
+
+      if (extractionPathEnd.toLowerCase() === archiveBaseName.toLowerCase()) {
+        if (fs.existsSync(extractionPath) && fs.lstatSync(extractionPath).isDirectory()) {
+          const filesInDir = await fs.promises.readdir(extractionPath);
+          if (filesInDir.length > 0 && filesInDir.some(f => f.toLowerCase() !== archiveFilename.toLowerCase())) {
+            return true;
+          }
+        }
+      }
+
+      const potentialExtractDir = path.join(extractionPath, archiveBaseName);
+      if (fs.existsSync(potentialExtractDir) && fs.lstatSync(potentialExtractDir).isDirectory()) {
+        const filesInDir = await fs.promises.readdir(potentialExtractDir);
+        if (filesInDir.length > 0) {
           return true;
         }
       }

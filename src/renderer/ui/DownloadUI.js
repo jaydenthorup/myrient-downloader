@@ -24,6 +24,7 @@ export default class DownloadUI {
     if (window.electronAPI && window.electronAPI.onExtractionStarted) {
       window.electronAPI.onExtractionStarted(() => {
         this._isExtracting = true;
+        this._setResultsInteraction(false);
         const elements = this._getElements();
         elements.overallExtractionProgressBar.classList.remove('hidden');
         elements.extractionProgressBar.classList.remove('hidden');
@@ -32,6 +33,9 @@ export default class DownloadUI {
     if (window.electronAPI && window.electronAPI.onExtractionEnded) {
       window.electronAPI.onExtractionEnded(() => {
         this._isExtracting = false;
+        if (!this.stateService.get('isDownloading')) {
+          this._setResultsInteraction(true);
+        }
         const elements = this._getElements();
         elements.overallExtractionProgressBar.classList.add('hidden');
         elements.extractionProgressBar.classList.add('hidden');
@@ -119,6 +123,31 @@ export default class DownloadUI {
       throttleSpeedInput,
       throttleUnitSelect,
     };
+  }
+
+  /**
+   * Enables or disables user interaction with the results list and associated controls.
+   * @param {boolean} enabled - True to enable interaction, false to disable.
+   * @private
+   */
+  _setResultsInteraction(enabled) {
+    const elements = this._getElements();
+    if (elements.selectAllResultsBtn) {
+      elements.selectAllResultsBtn.disabled = !enabled;
+    }
+    if (elements.deselectAllResultsBtn) {
+      elements.deselectAllResultsBtn.disabled = !enabled;
+    }
+    if (elements.resultsList) {
+      elements.resultsList.querySelectorAll('input[type=checkbox]').forEach(checkbox => {
+        checkbox.disabled = !enabled;
+      });
+      if (enabled) {
+        elements.resultsList.classList.remove('opacity-50', 'pointer-events-none');
+      } else {
+        elements.resultsList.classList.add('opacity-50', 'pointer-events-none');
+      }
+    }
   }
 
   /**
@@ -463,6 +492,7 @@ export default class DownloadUI {
       }
     }
 
+    this._setResultsInteraction(false);
     this._disableDownloadOptions();
     this.stateService.set('isDownloading', true);
     this.stateService.set('downloadStartTime', Date.now());
@@ -692,10 +722,26 @@ export default class DownloadUI {
     });
 
     window.electronAPI.onDownloadComplete((summary) => {
+      this.stateService.set('isDownloading', false);
       this._restoreDownloadOptions();
+
       const elements = this._getElements();
-      if (!elements.fileProgressContainer) return;
-      elements.fileProgressContainer.classList.add('hidden');
+      if (elements.downloadScanBtn) elements.downloadScanBtn.disabled = false;
+      if (elements.downloadDirBtn) elements.downloadDirBtn.disabled = false;
+      if (elements.downloadCancelBtn) {
+        elements.downloadCancelBtn.classList.add('hidden');
+        elements.downloadCancelBtn.disabled = false;
+      }
+      if (elements.overallProgressTime) elements.overallProgressTime.textContent = 'Estimated Time Remaining: --';
+      if (elements.downloadRestartBtn) elements.downloadRestartBtn.classList.remove('hidden');
+
+      if (elements.fileProgressContainer) {
+        elements.fileProgressContainer.classList.add('hidden');
+      }
+
+      if (!this._isExtracting) {
+        this._setResultsInteraction(true);
+      }
     });
 
     window.electronAPI.onExtractionProgress(async data => {

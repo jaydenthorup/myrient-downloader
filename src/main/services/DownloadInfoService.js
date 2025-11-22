@@ -40,6 +40,7 @@ class DownloadInfoService {
    */
   reset() {
     this.abortController = new AbortController();
+    this.httpAgent = new https.Agent({ keepAlive: true });
   }
 
   /**

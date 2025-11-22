@@ -307,12 +307,3 @@ document.addEventListener('DOMContentLoaded', async () => {
   checkForUpdatesOnStartup();
 });
 
-window.electronAPI.onDownloadComplete(async (summary) => {
-  stateService.set('isDownloading', false);
-  document.getElementById('download-scan-btn').disabled = false;
-  document.getElementById('download-dir-btn').disabled = false;
-  document.getElementById('download-cancel-btn').classList.add('hidden');
-  document.getElementById('download-cancel-btn').disabled = false;
-  document.getElementById('overall-progress-time').textContent = "Estimated Time Remaining: --";
-  document.getElementById('download-restart-btn').classList.remove('hidden');
-});
