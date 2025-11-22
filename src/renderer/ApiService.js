@@ -133,12 +133,15 @@ class ApiService {
    * Initiates the download process for the selected files.
    * @param {Array<object>} files An array of file objects to download.
    */
-  startDownload(files, isThrottlingEnabled, throttleSpeed, throttleUnit) {
+  startDownload(files) {
     const baseUrl = new URL(stateService.get('archive').href + stateService.get('directory').href, stateService.get('baseUrl')).href;
     const createSubfolder = stateService.get('createSubfolder');
     const maintainFolderStructure = stateService.get('maintainFolderStructure');
     const extractAndDelete = stateService.get('extractAndDelete');
     const extractPreviouslyDownloaded = stateService.get('extractPreviouslyDownloaded');
+    const isThrottlingEnabled = stateService.get('isThrottlingEnabled');
+    const throttleSpeed = stateService.get('throttleSpeed');
+    const throttleUnit = stateService.get('throttleUnit');
     window.electronAPI.startDownload(baseUrl, files, stateService.get('downloadDirectory'), createSubfolder, maintainFolderStructure, extractAndDelete, extractPreviouslyDownloaded, isThrottlingEnabled, throttleSpeed, throttleUnit);
   }
 

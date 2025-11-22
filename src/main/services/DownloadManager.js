@@ -110,7 +110,7 @@ class DownloadManager {
           throttleUnit
         );
         allSkippedFiles.push(...downloadResult.skippedFiles);
-        downloadedFiles = filesToDownload.filter(f => !downloadResult.skippedFiles.includes(f.name));
+        downloadedFiles = downloadResult.downloadedFiles;
       }
 
     } catch (e) {
@@ -138,18 +138,18 @@ class DownloadManager {
 
     let filesForExtraction = [...downloadedFiles];
     if (extractPreviouslyDownloaded && scanResult && scanResult.skippedFiles) {
-      const previouslyDownloadedArchives = scanResult.skippedFiles.filter(file => {
-        const gameName = path.parse(file.name).name;
-        const subfolderPath = createSubfolder ? path.join(targetDir, gameName) : targetDir;
-        const filePath = path.join(subfolderPath, file.name);
-        return fs.existsSync(filePath) && !allSkippedFiles.includes(file.name);
-      });
+      const previouslyDownloadedArchives = scanResult.skippedFiles.filter(file =>
+        file.skippedBecauseDownloaded &&
+        file.path &&
+        fs.existsSync(file.path) &&
+        !allSkippedFiles.includes(file.name)
+      );
       filesForExtraction.push(...previouslyDownloadedArchives);
     }
 
     if (extractAndDelete && !wasCancelled && filesForExtraction.length > 0) {
       this.downloadConsole.logDownloadStartingExtraction();
-      await this.extractFiles(filesForExtraction, targetDir, createSubfolder);
+      await this.extractFiles(filesForExtraction, targetDir, createSubfolder, maintainFolderStructure);
     }
 
     this.win.webContents.send('download-complete', {
@@ -164,15 +164,25 @@ class DownloadManager {
 
   /**
    * Extracts downloaded archive files.
-   * @param {Array<object>} downloadedFiles An array of file objects that have been downloaded.
+   * @param {Array<object>} downloadedFiles An array of file objects that have been downloaded, including a 'path' property.
    * @param {string} targetDir The target directory for extraction.
    * @param {boolean} createSubfolder Whether to extract into subfolders based on archive name.
+   * @param {boolean} maintainFolderStructure Whether the site's folder structure was maintained during download.
    * @returns {Promise<void>}
    */
-  async extractFiles(downloadedFiles, targetDir, createSubfolder) {
+  async extractFiles(downloadedFiles, targetDir, createSubfolder, maintainFolderStructure) {
     const extractionStartTime = performance.now();
     this.win.webContents.send('extraction-started');
-    const archiveFiles = downloadedFiles.filter(f => f.name.toLowerCase().endsWith('.zip'));
+    let archiveFiles = downloadedFiles.filter(f => f.name.toLowerCase().endsWith('.zip'));
+
+    const uniquePaths = new Map();
+    archiveFiles.forEach(file => {
+      if (file.path) {
+        uniquePaths.set(file.path, file);
+      }
+    });
+    archiveFiles = Array.from(uniquePaths.values());
+
     if (archiveFiles.length === 0) {
       this.downloadConsole.logNoArchivesToExtract();
       return;
@@ -187,7 +197,11 @@ class DownloadManager {
 
     let totalEntriesOverall = 0;
     for (const file of archiveFiles) {
-      const filePath = createSubfolder ? path.join(targetDir, path.parse(file.name).name, file.name) : path.join(targetDir, file.name);
+      const filePath = file.path;
+      if (!filePath || !fs.existsSync(filePath)) {
+        this.downloadConsole.logError(`Archive not found at ${filePath}, skipping size calculation.`);
+        continue;
+      }
       let zipfile;
       try {
         zipfile = await open(filePath);
@@ -206,7 +220,11 @@ class DownloadManager {
     }
 
     for (const file of archiveFiles) {
-      const filePath = createSubfolder ? path.join(targetDir, path.parse(file.name).name, file.name) : path.join(targetDir, file.name);
+      const filePath = file.path;
+      if (!filePath || !fs.existsSync(filePath)) {
+        this.downloadConsole.logError(`Archive not found at ${filePath}, skipping uncompressed size calculation.`);
+        continue;
+      }
       let zipfile;
       try {
         zipfile = await open(filePath);
@@ -232,8 +250,21 @@ class DownloadManager {
     for (let i = 0; i < archiveFiles.length; i++) {
       const file = archiveFiles[i];
       const archiveBaseName = path.parse(file.name).name;
-      const extractPath = createSubfolder ? path.join(targetDir, archiveBaseName) : targetDir;
-      const filePath = createSubfolder ? path.join(targetDir, path.parse(file.name).name, file.name) : path.join(targetDir, file.name);
+
+      let extractPath;
+      if (maintainFolderStructure) {
+        extractPath = path.dirname(file.path);
+      } else if (createSubfolder) {
+        extractPath = path.join(targetDir, archiveBaseName);
+      } else {
+        extractPath = targetDir;
+      }
+
+      const filePath = file.path;
+      if (!filePath || !fs.existsSync(filePath)) {
+        this.downloadConsole.logError(`Archive not found at ${filePath}, skipping extraction.`);
+        continue;
+      }
 
       let zipfile;
       const extractedFiles = [];

@@ -310,15 +310,18 @@ export default class DownloadUI {
 
     const downloadPath = this.stateService.get('downloadDirectory');
     const createSubfolder = this.stateService.get('createSubfolder');
+    const maintainFolderStructure = this.stateService.get('maintainFolderStructure');
+    const isCreatingSubfolders = createSubfolder || maintainFolderStructure;
+
     const currentStructure = await this.apiService.checkDownloadDirectoryStructure(downloadPath);
 
     let shouldProceed = true;
     let confirmationMessage = '';
 
-    if (currentStructure === this.downloadDirectoryStructure.FLAT && createSubfolder) {
+    if (currentStructure === this.downloadDirectoryStructure.FLAT && isCreatingSubfolders) {
       confirmationMessage = `The target directory "${downloadPath}" contains flat files, but you have selected to create subfolders. Do you want to continue?`;
       shouldProceed = false;
-    } else if (currentStructure === this.downloadDirectoryStructure.SUBFOLDERS && !createSubfolder) {
+    } else if (currentStructure === this.downloadDirectoryStructure.SUBFOLDERS && !isCreatingSubfolders) {
       confirmationMessage = `The target directory "${downloadPath}" contains subfolders, but you have selected to download files directly. Do you want to continue?`;
       shouldProceed = false;
     } else if (currentStructure === this.downloadDirectoryStructure.MIXED) {
@@ -366,10 +369,7 @@ export default class DownloadUI {
     elements.extractionProgressBar.classList.add('hidden');
     elements.overallExtractionProgressBar.classList.add('hidden');
 
-    const isThrottlingEnabled = this.stateService.get('isThrottlingEnabled');
-    const throttleSpeed = this.stateService.get('throttleSpeed');
-    const throttleUnit = this.stateService.get('throttleUnit');
-    this.apiService.startDownload(this.stateService.get('selectedResults'), isThrottlingEnabled, throttleSpeed, throttleUnit);
+    this.apiService.startDownload(this.stateService.get('selectedResults'));
   }
 
   /**
@@ -428,7 +428,13 @@ export default class DownloadUI {
     });
 
     document.addEventListener('change', (e) => {
-      const { throttleDownloadCheckbox, throttleSpeedInput, throttleUnitSelect } = this._getElements();
+      const {  
+        throttleSpeedInput, 
+        throttleUnitSelect, 
+        createSubfolderCheckbox, 
+        maintainFolderStructureCheckbox 
+      } = this._getElements();
+
       if (e.target.id === 'throttle-download-checkbox') {
         const isThrottlingEnabled = e.target.checked;
         throttleSpeedInput.disabled = !isThrottlingEnabled;
@@ -448,13 +454,38 @@ export default class DownloadUI {
         this.stateService.set('throttleUnit', e.target.value);
       }
 
-      const elements = this._getElements();
       if (e.target.id === 'create-subfolder-checkbox' && !e.target.disabled) {
-        this.stateService.set('createSubfolder', e.target.checked);
+        const isChecked = e.target.checked;
+        this.stateService.set('createSubfolder', isChecked);
+        if (maintainFolderStructureCheckbox) {
+            maintainFolderStructureCheckbox.disabled = isChecked;
+            const label = maintainFolderStructureCheckbox.closest('label');
+            if(label) {
+                label.classList.toggle('disabled-option', isChecked);
+            }
+            if (isChecked) {
+                maintainFolderStructureCheckbox.checked = false;
+                this.stateService.set('maintainFolderStructure', false);
+            }
+        }
       }
-      if (e.target.id === 'maintain-folder-structure-checkbox') {
-        this.stateService.set('maintainFolderStructure', e.target.checked);
+
+      if (e.target.id === 'maintain-folder-structure-checkbox' && !e.target.disabled) {
+        const isChecked = e.target.checked;
+        this.stateService.set('maintainFolderStructure', isChecked);
+        if (createSubfolderCheckbox) {
+            createSubfolderCheckbox.disabled = isChecked;
+            const label = createSubfolderCheckbox.closest('label');
+            if (label) {
+                label.classList.toggle('disabled-option', isChecked);
+            }
+            if (isChecked) {
+                createSubfolderCheckbox.checked = false;
+                this.stateService.set('createSubfolder', false);
+            }
+        }
       }
+      
       if (e.target.id === 'extract-archives-checkbox') {
         const extractPreviouslyDownloadedCheckbox = document.getElementById('extract-previously-downloaded-checkbox');
         if (extractPreviouslyDownloadedCheckbox) {

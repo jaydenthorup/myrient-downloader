@@ -4,6 +4,7 @@ import https from 'https';
 import { URL } from 'url';
 import axios from 'axios';
 import MyrientService from './MyrientService.js';
+import FileSystemService from './FileSystemService.js';
 
 /**
  * Service responsible for gathering information about files to be downloaded.
@@ -67,41 +68,6 @@ class DownloadInfoService {
   }
 
   /**
-   * Checks if a game has already been extracted to the target directory.
-   * @param {string} targetDir The base directory where files are extracted.
-   * @param {string} gameName The name of the game (usually derived from the filename).
-   * @param {string} filename The original filename (e.g., "game.zip").
-   * @param {boolean} createSubfolder Whether subfolders are created for each game.
-   * @returns {Promise<boolean>} True if the game appears to be already extracted, false otherwise.
-   * @private
-   */
-  async _isAlreadyExtracted(targetDir, filename, createSubfolder) {
-    const gameName = path.parse(filename).name;
-    if (createSubfolder) {
-      const subfolderPath = path.join(targetDir, gameName);
-      try {
-        if (fs.existsSync(subfolderPath) && fs.lstatSync(subfolderPath).isDirectory()) {
-          const subfolderFiles = await fs.promises.readdir(subfolderPath);
-          if (subfolderFiles.length > 0 && subfolderFiles.some(f => f.toLowerCase() !== filename.toLowerCase())) {
-            return true;
-          }
-        }
-      } catch (e) {
-      }
-    } else {
-      try {
-        const filesInDir = await fs.promises.readdir(targetDir);
-        if (filesInDir.some(f => path.parse(f).name === gameName && path.extname(f).toLowerCase() !== '.zip')) {
-          return true;
-        }
-      }
-      catch (e) {
-      }
-    }
-    return false;
-  }
-
-  /**
    * Gathers download information for a list of files and/or directories, including total size,
    * and identifies files that can be skipped due to prior download or extraction.
    * @param {object} win The Electron BrowserWindow instance for sending progress updates.
@@ -154,7 +120,9 @@ class DownloadInfoService {
       const filename = fileInfo.name;
       const fileUrl = fileInfo.href;
 
-      if (await this._isAlreadyExtracted(targetDir, filename, createSubfolder)) {
+      const { targetPath, extractPath } = FileSystemService.calculatePaths(targetDir, fileInfo, { createSubfolder, maintainFolderStructure, baseUrl });
+
+      if (await FileSystemService.isAlreadyExtracted(extractPath, filename)) {
         fileInfo.skip = true;
         fileInfo.skippedBecauseExtracted = true;
         skippedBecauseExtractedCount++;
@@ -171,59 +139,6 @@ class DownloadInfoService {
         continue;
       }
 
-      let finalTargetDir = targetDir;
-      if (createSubfolder) {
-        finalTargetDir = path.join(targetDir, path.parse(filename).name);
-      }
-      
-      let targetPath;
-      if (maintainFolderStructure && fileInfo.href) {
-        // Use the same logic as DownloadService to calculate the target path
-        let relativePath = fileInfo.href;
-        
-        try {
-          const hrefUrl = new URL(fileInfo.href);
-          const baseUrlObj = new URL(baseUrl);
-          
-          let hrefPath = hrefUrl.pathname;
-          let basePath = baseUrlObj.pathname;
-          
-          basePath = basePath.replace(/\/$/, '');
-          
-          const basePathSegments = basePath.split('/').filter(s => s.length > 0);
-          const selectedDirectory = basePathSegments[basePathSegments.length - 1];
-          
-          const parentPath = basePath.substring(0, basePath.lastIndexOf('/' + selectedDirectory));
-          
-          if (parentPath && hrefPath.startsWith(parentPath + '/')) {
-            relativePath = hrefPath.substring(parentPath.length + 1);
-          } else if (hrefPath.startsWith(basePath + '/')) {
-            relativePath = selectedDirectory + '/' + hrefPath.substring(basePath.length + 1);
-          } else {
-            relativePath = filename;
-          }
-          
-          relativePath = decodeURIComponent(relativePath);
-          
-        } catch (e) {
-          if (relativePath.startsWith(baseUrl)) {
-            relativePath = relativePath.substring(baseUrl.length);
-          }
-          relativePath = relativePath.replace(/^\/+/, '');
-        }
-        
-        const hrefDirPath = path.dirname(relativePath);
-        if (hrefDirPath && hrefDirPath !== '.' && hrefDirPath !== '/') {
-          const normalizedDirPath = hrefDirPath.replace(/\//g, path.sep);
-          const fullDirPath = path.join(finalTargetDir, normalizedDirPath);
-          targetPath = path.join(fullDirPath, filename);
-        } else {
-          targetPath = path.join(finalTargetDir, filename);
-        }
-      } else {
-        targetPath = path.join(finalTargetDir, filename);
-      }
-
       try {
         const response = await session.head(fileUrl, { timeout: 15000 });
         const remoteSize = parseInt(response.headers['content-length'] || '0', 10);
@@ -236,6 +151,7 @@ class DownloadInfoService {
           if (remoteSize > 0 && localSize === remoteSize) {
             fileInfo.skip = true;
             fileInfo.skippedBecauseDownloaded = true;
+            fileInfo.path = targetPath;
             skippedBecauseDownloadedCount++;
             skippedSize += remoteSize;
             skippedFiles.push(fileInfo);

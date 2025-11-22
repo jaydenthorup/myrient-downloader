@@ -4,6 +4,7 @@ import https from 'https';
 import { URL } from 'url';
 import axios from 'axios';
 import { Throttle } from '@kldzj/stream-throttle';
+import FileSystemService from './FileSystemService.js';
 
 /**
  * Service responsible for handling the actual downloading of files.
@@ -59,7 +60,7 @@ class DownloadService {
    * @param {boolean} isThrottlingEnabled Whether to enable download throttling.
    * @param {number} throttleSpeed The download speed limit in MB/s.
    * @param {string} throttleUnit The unit for the download speed limit (KB/s or MB/s).
-   * @returns {Promise<{skippedFiles: Array<string>}>} A promise that resolves with an object containing any skipped files.
+   * @returns {Promise<{skippedFiles: Array<string>, downloadedFiles: Array<object>}>} A promise that resolves with an object containing any skipped files and successfully downloaded files.
    * @throws {Error} If the download is cancelled between files or mid-file.
    */
   async downloadFiles(win, baseUrl, files, targetDir, totalSize, initialDownloadedSize = 0, createSubfolder = false, maintainFolderStructure = false, totalFilesOverall, initialSkippedFileCount, isThrottlingEnabled = false, throttleSpeed = 10, throttleUnit = 'MB/s') {
@@ -74,6 +75,7 @@ class DownloadService {
     let totalDownloaded = initialDownloadedSize;
     let totalBytesFailed = 0;
     const skippedFiles = [];
+    const downloadedFiles = [];
     let lastDownloadProgressUpdateTime = 0;
 
     for (let fileIndex = 0; fileIndex < files.length; fileIndex++) {
@@ -85,90 +87,17 @@ class DownloadService {
       if (fileInfo.skip) continue;
 
       const filename = fileInfo.name;
-      let finalTargetDir = targetDir;
+      const { targetPath } = FileSystemService.calculatePaths(targetDir, fileInfo, { createSubfolder, maintainFolderStructure, baseUrl });
 
-      if (createSubfolder) {
-        const gameName = path.parse(filename).name;
-        finalTargetDir = path.join(targetDir, gameName);
-
-        if (!fs.existsSync(finalTargetDir)) {
-          try {
-            fs.mkdirSync(finalTargetDir, { recursive: true });
-          } catch (mkdirErr) {
-            this.downloadConsole.logCreatingSubfolderError(finalTargetDir, mkdirErr.message);
-          }
-        }
-      }
-
-      let targetPath;
-      if (maintainFolderStructure && fileInfo.href) {
-        // Extract relative path by comparing href with baseUrl
-        let relativePath = fileInfo.href;
-        
+      const finalDir = path.dirname(targetPath);
+      if (!fs.existsSync(finalDir)) {
         try {
-          // Parse both URLs to get their pathname components
-          const hrefUrl = new URL(fileInfo.href);
-          const baseUrlObj = new URL(baseUrl);
-          
-          // Get the pathname from both (e.g., "/files/Total%20DOS%20Collection/Games/Applications/file.zip")
-          let hrefPath = hrefUrl.pathname;
-          let basePath = baseUrlObj.pathname;
-          
-          // Remove trailing slash from basePath to get the parent directory
-          basePath = basePath.replace(/\/$/, '');
-          
-          // Extract the last segment of basePath (e.g., "Games")
-          const basePathSegments = basePath.split('/').filter(s => s.length > 0);
-          const selectedDirectory = basePathSegments[basePathSegments.length - 1];
-          
-          // Get the parent path (everything before the selected directory)
-          const parentPath = basePath.substring(0, basePath.lastIndexOf('/' + selectedDirectory));
-          
-          // If hrefPath starts with parentPath, extract relative portion including selected directory
-          if (parentPath && hrefPath.startsWith(parentPath + '/')) {
-            relativePath = hrefPath.substring(parentPath.length + 1); // +1 to remove leading slash
-          } else if (hrefPath.startsWith(basePath + '/')) {
-            // Fallback: if parentPath logic fails, at least include the selected directory
-            relativePath = selectedDirectory + '/' + hrefPath.substring(basePath.length + 1);
-          } else {
-            // Fallback: just use the filename
-            relativePath = filename;
-          }
-          
-          // Decode URL encoding
-          relativePath = decodeURIComponent(relativePath);
-          
-        } catch (e) {
-          // If URL parsing fails, treat href as a simple path
-          // Try string-based removal of baseUrl
-          if (relativePath.startsWith(baseUrl)) {
-            relativePath = relativePath.substring(baseUrl.length);
-          }
-          relativePath = relativePath.replace(/^\/+/, '');
+          fs.mkdirSync(finalDir, { recursive: true });
+        } catch (mkdirErr) {
+          this.downloadConsole.logCreatingSubfolderError(finalDir, mkdirErr.message);
         }
-        
-        // Extract directory path from relative path (e.g., "Games/Applications/file.zip" -> "Games/Applications")
-        const hrefDirPath = path.dirname(relativePath);
-        if (hrefDirPath && hrefDirPath !== '.' && hrefDirPath !== '/') {
-          // Normalize path separators for Windows
-          const normalizedDirPath = hrefDirPath.replace(/\//g, path.sep);
-          
-          // Create the folder structure within the target directory
-          const fullDirPath = path.join(finalTargetDir, normalizedDirPath);
-          if (!fs.existsSync(fullDirPath)) {
-            try {
-              fs.mkdirSync(fullDirPath, { recursive: true });
-            } catch (mkdirErr) {
-              this.downloadConsole.logCreatingSubfolderError(fullDirPath, mkdirErr.message);
-            }
-          }
-          targetPath = path.join(fullDirPath, filename);
-        } else {
-          targetPath = path.join(finalTargetDir, filename);
-        }
-      } else {
-        targetPath = path.join(finalTargetDir, filename);
       }
+
       const fileUrl = fileInfo.href;
       const fileSize = fileInfo.size || 0;
       let fileDownloaded = fileInfo.downloadedBytes || 0;
@@ -267,6 +196,7 @@ class DownloadService {
           });
 
           writer.on('finish', () => {
+            downloadedFiles.push({ ...fileInfo, path: targetPath });
             resolve();
           });
           writer.on('error', (err) => {
@@ -305,7 +235,7 @@ class DownloadService {
       }
     }
 
-    return { skippedFiles };
+    return { skippedFiles, downloadedFiles };
   }
 }
 
