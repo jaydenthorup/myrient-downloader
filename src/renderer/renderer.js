@@ -33,13 +33,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     uiManager.showLoading('Loading Directories...');
     try {
       const directories = await apiService.loadDirectories();
-      uiManager.showView('directories');
-      uiManager.populateList('list-directories', directories, (item) => {
-        handleDirectorySelect(item);
-      });
+      if (directories.length === 0) {
+        const currentArchive = stateService.get('archive');
+        handleDirectorySelect(currentArchive);
+      } else {
+        uiManager.showView('directories');
+        uiManager.populateList('list-directories', directories, (item) => {
+          handleDirectorySelect(item);
+        });
+        uiManager.hideLoading();
+      }
     } catch (e) {
       alert(`Error: ${e.message}`);
-    } finally {
       uiManager.hideLoading();
     }
   }
@@ -137,21 +142,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  function goBackToDirectoryOrArchiveList() {
+    const archiveHref = stateService.get('archive').href;
+    const directoryHref = stateService.get('directory').href;
+
+    if (archiveHref === directoryHref) {
+      stateService.set('archive', { name: '', href: '' });
+      stateService.set('directory', { name: '', href: '' });
+      stateService.resetWizardState();
+      loadArchives();
+    } else {
+      stateService.set('directory', { name: '', href: '' });
+      stateService.resetWizardState();
+      loadDirectories();
+    }
+  }
+
   document.getElementById('header-back-btn').addEventListener('click', () => {
     if (stateService.get('isDownloading')) return;
     if (stateService.get('currentView') === 'results') {
       if (stateService.get('wizardSkipped')) {
-        stateService.set('directory', { name: '', href: '' });
-        stateService.resetWizardState();
-        loadDirectories();
+        goBackToDirectoryOrArchiveList();
       } else {
         uiManager.showView('wizard');
         uiManager.setupWizard();
       }
     } else if (stateService.get('currentView') === 'wizard') {
-      stateService.set('directory', { name: '', href: '' });
-      stateService.resetWizardState();
-      loadDirectories();
+      goBackToDirectoryOrArchiveList();
     } else if (stateService.get('currentView') === 'directories') {
       stateService.set('archive', { name: '', href: '' });
       stateService.set('directory', { name: '', href: '' });

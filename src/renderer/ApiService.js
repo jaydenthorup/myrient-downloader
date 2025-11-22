@@ -55,7 +55,10 @@ class ApiService {
    * @throws {Error} If there is an error scraping or parsing files.
    */
   async scrapeAndParseFiles() {
-    const pageUrl = new URL(stateService.get('archive').href + stateService.get('directory').href, stateService.get('baseUrl')).href;
+    const archiveHref = stateService.get('archive').href;
+    const directoryHref = stateService.get('directory').href;
+    const path = archiveHref === directoryHref ? archiveHref : archiveHref + directoryHref;
+    const pageUrl = new URL(path, stateService.get('baseUrl')).href;
     const result = await window.electronAPI.scrapeAndParseFiles(pageUrl);
     if (result.error) {
       throw new Error(result.error);
@@ -134,7 +137,10 @@ class ApiService {
    * @param {Array<object>} files An array of file objects to download.
    */
   startDownload(files) {
-    const baseUrl = new URL(stateService.get('archive').href + stateService.get('directory').href, stateService.get('baseUrl')).href;
+    const archiveHref = stateService.get('archive').href;
+    const directoryHref = stateService.get('directory').href;
+    const path = archiveHref === directoryHref ? archiveHref : archiveHref + directoryHref;
+    const baseUrl = new URL(path, stateService.get('baseUrl')).href;
     const createSubfolder = stateService.get('createSubfolder');
     const maintainFolderStructure = stateService.get('maintainFolderStructure');
     const extractAndDelete = stateService.get('extractAndDelete');
