@@ -51,7 +51,7 @@ class MyrientService {
         !href.startsWith('?') &&
         !href.startsWith('http') &&
         !href.startsWith('/') &&
-        !href.includes('..') &&
+        !href.split('/').includes('..') &&
         href !== './') {
         links.push({
           name: decodeURIComponent(href.replace(/\/$/, '')),
