@@ -178,6 +178,16 @@ class IpcManager {
       shell.openExternal(url);
     });
 
+    ipcMain.on('open-directory', (event, path) => {
+      /**
+       * Handles the 'open-directory' IPC channel.
+       * Opens a directory in the user's file explorer.
+       * @param {object} event The IPC event object.
+       * @param {string} path The path of the directory to open.
+       */
+      shell.openPath(path);
+    });
+
     ipcMain.on('window-minimize', () => {
       /**
        * Handles the 'window-minimize' IPC channel.

@@ -831,9 +831,17 @@ class UIManager {
         if (dir) {
           document.getElementById('download-dir-text').textContent = dir;
           stateService.set('downloadDirectory', dir);
+          document.getElementById('open-download-dir-btn').classList.remove('hidden');
           if (this.downloadUI && typeof this.downloadUI.updateScanButtonState === 'function') {
             this.downloadUI.updateScanButtonState();
           }
+        }
+      });
+
+      document.getElementById('open-download-dir-btn').addEventListener('click', () => {
+        const dir = stateService.get('downloadDirectory');
+        if (dir) {
+          apiService.openDirectory(dir);
         }
       });
 

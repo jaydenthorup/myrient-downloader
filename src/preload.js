@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   deleteFile: (filePath) => ipcRenderer.invoke('delete-file', filePath),
 
   openExternal: (url) => ipcRenderer.send('open-external', url),
+  openDirectory: (path) => ipcRenderer.send('open-directory', path),
 
   windowMinimize: () => ipcRenderer.send('window-minimize'),
   windowMaximizeRestore: () => ipcRenderer.send('window-maximize-restore'),

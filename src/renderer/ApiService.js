@@ -162,6 +162,14 @@ class ApiService {
   }
 
   /**
+   * Opens a directory in the user's file explorer.
+   * @param {string} path The path to the directory to open.
+   */
+  openDirectory(path) {
+    window.electronAPI.openDirectory(path);
+  }
+
+  /**
    * Opens a URL in the user's default external browser.
    * @param {string} url The URL to open.
    */

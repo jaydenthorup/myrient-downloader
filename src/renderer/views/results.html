@@ -20,9 +20,10 @@
     class="h-64 min-h-64 resize-y overflow-y-auto bg-neutral-800 border border-neutral-700 rounded-lg p-2 mb-4 space-y-2">
   </div>
   <div id="download-ui" class="space-y-4">
-    <div>
+    <div class="flex items-center gap-2">
       <button id="download-dir-btn" class="btn btn-primary">Set Download Directory</button>
-      <span id="download-dir-text" class="text-gray-500 ml-4">No directory selected.</span>
+      <button id="open-download-dir-btn" class="btn btn-secondary hidden">Open Directory</button>
+      <span id="download-dir-text" class="text-gray-500 ml-2">No directory selected.</span>
     </div>
 
     <div id="download-options" class="space-y-2">
