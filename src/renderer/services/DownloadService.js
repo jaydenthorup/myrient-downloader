@@ -61,10 +61,11 @@ class DownloadService {
     const maintainFolderStructure = stateService.get('maintainFolderStructure');
     const extractAndDelete = stateService.get('extractAndDelete');
     const extractPreviouslyDownloaded = stateService.get('extractPreviouslyDownloaded');
+    const skipScan = document.getElementById('skip-scan-checkbox').checked;
     const isThrottlingEnabled = stateService.get('isThrottlingEnabled');
     const throttleSpeed = stateService.get('throttleSpeed');
     const throttleUnit = stateService.get('throttleUnit');
-    window.electronAPI.startDownload(baseUrl, files, stateService.get('downloadDirectory'), createSubfolder, maintainFolderStructure, extractAndDelete, extractPreviouslyDownloaded, isThrottlingEnabled, throttleSpeed, throttleUnit);
+    window.electronAPI.startDownload(baseUrl, files, stateService.get('downloadDirectory'), createSubfolder, maintainFolderStructure, extractAndDelete, extractPreviouslyDownloaded, skipScan, isThrottlingEnabled, throttleSpeed, throttleUnit);
   }
 
   /**

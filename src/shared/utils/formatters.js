@@ -41,3 +41,35 @@ export function formatTime(seconds) {
 
   return parts.join(' ');
 }
+
+/**
+ * Parses a size string (e.g., "1.23 MiB") into bytes.
+ * @param {string} sizeString The string to parse.
+ * @returns {number} The number of bytes.
+ */
+export function parseSize(sizeString) {
+  if (!sizeString || typeof sizeString !== 'string') return 0;
+  sizeString = sizeString.trim();
+
+  const units = {
+    'B': 1, 'BYTES': 1,
+    'K': 1024, 'KB': 1000, 'KIB': 1024,
+    'M': 1024 * 1024, 'MB': 1000 * 1000, 'MIB': 1024 * 1024,
+    'G': 1024 * 1024 * 1024, 'GB': 1000 * 1000 * 1000, 'GIB': 1024 * 1024 * 1024,
+    'T': 1024 * 1024 * 1024 * 1024, 'TB': 1000 * 1000 * 1000 * 1000, 'TIB': 1024 * 1024 * 1024 * 1024,
+  };
+
+  const match = sizeString.match(/^([\d\.]+)\s*([a-zA-Z]+)$/);
+
+  if (match) {
+    const value = parseFloat(match[1]);
+    const unit = match[2].toUpperCase();
+
+    if (!isNaN(value) && units[unit] !== undefined) {
+      return Math.round(value * units[unit]);
+    }
+  }
+
+  const value = parseFloat(sizeString);
+  return isNaN(value) ? 0 : Math.round(value);
+}

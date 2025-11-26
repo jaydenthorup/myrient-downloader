@@ -175,9 +175,7 @@ class FileParserService {
         });
       } else {
         const parsed = this.parseFilename(item.name);
-        parsed.href = item.href;
-        parsed.type = 'file';
-        allParsedItems.push(parsed);
+        allParsedItems.push({ ...item, ...parsed, type: 'file' });
         for (const category in parsed.categorizedTags) {
           if (!allTags[category]) {
             allTags[category] = new Set();

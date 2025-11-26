@@ -3,8 +3,9 @@ import DownloadService from './DownloadService.js';
 import { open } from 'yauzl-promise';
 import fs from 'fs';
 import path from 'path';
-import { formatBytes } from '../../shared/utils/formatters.js';
+import { formatBytes, parseSize } from '../../shared/utils/formatters.js';
 import { calculateEta } from '../../shared/utils/time.js';
+import { URL } from 'url';
 
 /**
  * Manages the overall download and extraction process.
@@ -57,12 +58,13 @@ class DownloadManager {
    * @param {boolean} maintainFolderStructure Whether to maintain the site's folder structure.
    * @param {boolean} extractAndDelete Whether to extract archives and delete them after download.
    * @param {boolean} extractPreviouslyDownloaded Whether to extract previously downloaded archives.
+   * @param {boolean} skipScan Whether to skip the pre-download file size scan.
    * @param {boolean} isThrottlingEnabled Whether download throttling is enabled.
    * @param {number} throttleSpeed The speed for download throttling.
    * @param {string} throttleUnit The unit for download throttling speed (e.g., 'kb', 'mb').
    * @returns {Promise<{success: boolean}>} A promise that resolves with a success status.
    */
-  async startDownload(baseUrl, files, targetDir, createSubfolder, maintainFolderStructure, extractAndDelete, extractPreviouslyDownloaded, isThrottlingEnabled, throttleSpeed, throttleUnit) {
+  async startDownload(baseUrl, files, targetDir, createSubfolder, maintainFolderStructure, extractAndDelete, extractPreviouslyDownloaded, skipScan, isThrottlingEnabled, throttleSpeed, throttleUnit) {
     this.reset();
 
     const downloadStartTime = performance.now();
@@ -77,11 +79,39 @@ class DownloadManager {
     let scanResult;
 
     try {
-      scanResult = await this.downloadInfoService.getDownloadInfo(this.win, baseUrl, files, targetDir, createSubfolder, maintainFolderStructure);
+      if (skipScan) {
+        this.downloadConsole.log('Skipping file size scan. Using estimates.');
+        this.win.webContents.send('download-scan-progress', { current: 1, total: 1, message: "Scan skipped" });
+
+        const processedFiles = files.map(f => {
+          const parsedFileSize = parseSize(f.size);
+          return {
+            ...f,
+            name: f.name_raw,
+            href: new URL(f.href, baseUrl).href,
+            size: parsedFileSize,
+            path: null
+          };
+        });
+
+        totalSize = processedFiles.reduce((acc, file) => acc + (file.size || 0), 0);
+
+        scanResult = {
+          filesToDownload: processedFiles,
+          totalSize: totalSize,
+          skippedSize: 0,
+          skippedFiles: [],
+          skippedBecauseDownloadedCount: 0,
+          skippedBecauseExtractedCount: 0,
+        };
+      } else {
+        scanResult = await this.downloadInfoService.getDownloadInfo(this.win, baseUrl, files, targetDir, createSubfolder, maintainFolderStructure);
+      }
 
       if (this.isCancelled) {
         throw new Error("CANCELLED_DURING_SCAN");
       }
+
 
       filesToDownload = scanResult.filesToDownload;
       totalSize = scanResult.totalSize;
@@ -99,7 +129,7 @@ class DownloadManager {
       } else {
         const remainingSize = totalSize - skippedSize;
         this.downloadConsole.logTotalDownloadSize(formatBytes(remainingSize));
-        this.win.webContents.send('download-overall-progress', { current: skippedSize, total: totalSize, skippedSize: skippedSize, eta: calculateEta(skippedSize, totalSize, downloadStartTime) });
+        this.win.webContents.send('download-overall-progress', { current: skippedSize, total: totalSize, skippedSize: skippedSize, eta: calculateEta(skippedSize, totalSize, downloadStartTime), isFinal: false });
 
         const totalFilesOverall = files.length;
         const initialSkippedFileCount = scanResult.skippedFiles.length;
@@ -144,6 +174,15 @@ class DownloadManager {
 
     if (summaryMessage) {
       this.downloadConsole.log(summaryMessage);
+    }
+
+    if (!wasCancelled) {
+      this.win.webContents.send('download-overall-progress', {
+        current: totalSize,
+        total: totalSize,
+        skippedSize: 0,
+        isFinal: true
+      });
     }
 
     let filesForExtraction = [...downloadedFiles];

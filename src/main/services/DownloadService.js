@@ -207,7 +207,8 @@ class DownloadService {
               win.webContents.send('download-overall-progress', {
                 current: totalDownloaded,
                 total: totalSize - totalBytesFailed,
-                skippedSize: initialDownloadedSize
+                skippedSize: initialDownloadedSize,
+                isFinal: false
               });
             }
           });
@@ -217,6 +218,13 @@ class DownloadService {
           });
 
           writer.on('finish', () => {
+            win.webContents.send('download-file-progress', {
+                name: filename,
+                current: fileSize,
+                total: fileSize,
+                currentFileIndex: initialSkippedFileCount + fileIndex + 1,
+                totalFilesToDownload: totalFilesOverall
+            });
             downloadedFiles.push({ ...fileInfo, path: targetPath });
             resolve();
           });
@@ -246,7 +254,8 @@ class DownloadService {
         win.webContents.send('download-overall-progress', {
           current: totalDownloaded,
           total: totalSize - totalBytesFailed,
-          skippedSize: initialDownloadedSize
+          skippedSize: initialDownloadedSize,
+          isFinal: false
         });
 
         try {

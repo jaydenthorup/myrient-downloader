@@ -44,6 +44,7 @@ const tooltipContent = {
   overallExtractionProgress: "Shows the combined progress for all archives being extracted.",
   fileExtractionProgress: "Shows the progress for the currently extracting archive.",
   throttleSpeed: "Limit the download speed to the specified value. This is useful for managing bandwidth usage. You can set the speed in Kilobytes per second (KB/s) or Megabytes per second (MB/s).",
+  skipScan: "Skips the pre-download scan that gets the exact size of each file. This makes the download start faster, but progress bars and time estimates will be less accurate. The ability to skip already-downloaded files will also be disabled.",
   downloadOptions: "Configure how files are downloaded and processed."
 };
 

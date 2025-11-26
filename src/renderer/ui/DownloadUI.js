@@ -1,4 +1,4 @@
-import { formatTime, formatBytes } from '../../shared/utils/formatters.js';
+import { formatTime, formatBytes, parseSize } from '../../shared/utils/formatters.js';
 import InfoIcon from './InfoIcon.js';
 import tooltipContent from '../tooltipContent.js';
 
@@ -94,12 +94,15 @@ export default class DownloadUI {
       selectAllResultsBtn: document.getElementById('select-all-results-btn'),
       deselectAllResultsBtn: document.getElementById('deselect-all-results-btn'),
       resultsSelectedCount: document.getElementById('results-selected-count'),
+      totalSelectedDownloadSizeDisplay: document.getElementById('total-selected-download-size'),
       createSubfolderCheckbox: document.getElementById('create-subfolder-checkbox'),
       createSubfolderLabel: document.querySelector('label[for="create-subfolder-checkbox"]'),
       maintainFolderStructureCheckbox: document.getElementById('maintain-folder-structure-checkbox'),
       throttleDownloadCheckbox: document.getElementById('throttle-download-checkbox'),
       throttleSpeedInput: document.getElementById('throttle-speed-input'),
       throttleUnitSelect: document.getElementById('throttle-unit-select'),
+      extractArchivesCheckbox: document.getElementById('extract-archives-checkbox'),
+      extractPreviouslyDownloadedCheckbox: document.getElementById('extract-previously-downloaded-checkbox'),
     };
   }
 
@@ -123,6 +126,7 @@ export default class DownloadUI {
       createSubfolderCheckbox,
       extractArchivesCheckbox: document.getElementById('extract-archives-checkbox'),
       extractPreviouslyDownloadedCheckbox: document.getElementById('extract-previously-downloaded-checkbox'),
+      skipScanCheckbox: document.getElementById('skip-scan-checkbox'),
       throttleDownloadCheckbox,
       throttleSpeedInput,
       throttleUnitSelect,
@@ -167,6 +171,7 @@ export default class DownloadUI {
       subfolder: els.createSubfolderCheckbox,
       extract: els.extractArchivesCheckbox,
       extractPrev: els.extractPreviouslyDownloadedCheckbox,
+      skipScan: els.skipScanCheckbox,
       throttle: els.throttleDownloadCheckbox,
       throttleSpeed: els.throttleSpeedInput,
       throttleUnit: els.throttleUnitSelect,
@@ -215,6 +220,7 @@ export default class DownloadUI {
       subfolder: els.createSubfolderCheckbox,
       extract: els.extractArchivesCheckbox,
       extractPrev: els.extractPreviouslyDownloadedCheckbox,
+      skipScan: els.skipScanCheckbox,
       throttle: els.throttleDownloadCheckbox,
       throttleSpeed: els.throttleSpeedInput,
       throttleUnit: els.throttleUnitSelect,
@@ -265,8 +271,20 @@ export default class DownloadUI {
   updateSelectedCount() {
     const elements = this._getElements();
     if (!elements.resultsSelectedCount) return;
-    const selectedCount = this.stateService.get('selectedResults').length;
+    const selectedCount = this.stateService.get('selectedFilesForDownload').length;
     elements.resultsSelectedCount.innerHTML = `Selected to download: <span class="font-bold text-white">${selectedCount}</span>`;
+  }
+
+  /**
+   * Updates the displayed total download size.
+   * @memberof DownloadUI
+   * @private
+   */
+  _updateTotalDownloadSizeDisplay() {
+    const elements = this._getElements();
+    if (!elements.totalSelectedDownloadSizeDisplay) return;
+    const totalSize = this.stateService.get('totalSelectedDownloadSize');
+    elements.totalSelectedDownloadSizeDisplay.textContent = formatBytes(totalSize);
   }
 
   /**
@@ -276,21 +294,26 @@ export default class DownloadUI {
    */
   _updateSelectionState() {
     const elements = this._getElements();
-    if (!elements.resultsList) return;
+    if (!elements.resultsList) {
+      return;
+    }
 
     const finalFileList = this.stateService.get('finalFileList');
-    const updatedSelectedResults = Array.from(elements.resultsList.querySelectorAll('input[type=checkbox]:checked'))
+    const checkedCheckboxes = elements.resultsList.querySelectorAll('input[type=checkbox]:checked');
+
+    const updatedSelectedResults = Array.from(checkedCheckboxes)
       .map(cb => {
-        const name = cb.parentElement.dataset.name;
-        return finalFileList.find(f => f.name_raw === name);
+        const name = cb.parentElement.dataset.name.trim();
+        const file = finalFileList.find(f => f.name_raw && f.name_raw.trim() === name);
+        return file;
       })
       .filter(Boolean);
 
-    this.stateService.set('selectedResults', updatedSelectedResults);
+    this.stateService.setSelectedFilesForDownload(updatedSelectedResults);
     this.updateSelectedCount();
+    this._updateTotalDownloadSizeDisplay();
     this.updateScanButtonState();
   }
-
   /**
    * Updates the text of the Scan & Download button based on extract checkbox state.
    * @memberof DownloadUI
@@ -299,12 +322,22 @@ export default class DownloadUI {
     const elements = this._getElements();
     const scanBtn = elements.downloadScanBtn;
     const extractCheckbox = document.getElementById('extract-archives-checkbox');
+    const skipScanCheckbox = document.getElementById('skip-scan-checkbox');
+
     if (scanBtn) {
-      if (extractCheckbox && extractCheckbox.checked) {
-        scanBtn.textContent = 'Scan, Download & Extract';
+      let text = '';
+      if (skipScanCheckbox && skipScanCheckbox.checked) {
+        text = 'Download Now';
+        if (extractCheckbox && extractCheckbox.checked) {
+          text = 'Download & Extract';
+        }
       } else {
-        scanBtn.textContent = 'Scan & Download';
+        text = 'Scan & Download';
+        if (extractCheckbox && extractCheckbox.checked) {
+          text = 'Scan, Download & Extract';
+        }
       }
+      scanBtn.textContent = text;
     }
   }
 
@@ -316,8 +349,8 @@ export default class DownloadUI {
     const elements = this._getElements();
     const scanBtn = elements.downloadScanBtn;
     if (scanBtn) {
-      const selectedResults = this.stateService.get('selectedResults') || [];
-      const noResults = selectedResults.length === 0;
+      const selectedFilesForDownload = this.stateService.get('selectedFilesForDownload') || [];
+      const noResults = selectedFilesForDownload.length === 0;
       const noDir = !this.stateService.get('downloadDirectory');
       if (noResults && noDir) {
         scanBtn.title = "Select at least one result and a target directory to enable downloading.";
@@ -339,8 +372,8 @@ export default class DownloadUI {
     const elements = this._getElements();
     const scanBtn = elements.downloadScanBtn;
     if (scanBtn) {
-      const selectedResults = this.stateService.get('selectedResults') || [];
-      const noResults = selectedResults.length === 0;
+      const selectedFilesForDownload = this.stateService.get('selectedFilesForDownload') || [];
+      const noResults = selectedFilesForDownload.length === 0;
       const noDir = !this.stateService.get('downloadDirectory');
       scanBtn.disabled = noResults || noDir;
       this.updateScanButtonText();
@@ -357,9 +390,7 @@ export default class DownloadUI {
    */
   async populateResults(hasSubdirectories = false) {
     const elements = this._getElements();
-    if (!elements.resultsFileCount) return;
-
-    const finalFileList = this.stateService.get('finalFileList');
+    const finalFileList = this.stateService.get('finalFileList') || [];
     elements.resultsFileCount.textContent = finalFileList.length;
     elements.resultsTotalCount.textContent = this.stateService.get('allFiles').length;
 
@@ -369,11 +400,15 @@ export default class DownloadUI {
       const el = document.createElement('label');
       el.className = 'flex items-center p-2 bg-neutral-900 rounded-md space-x-2 cursor-pointer border border-transparent hover:border-accent-500 hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-accent-500 select-none';
       el.dataset.name = item.name_raw;
+      el.title = item.name_raw;
       el.tabIndex = 0;
 
       el.innerHTML = `
         <input type="checkbox" class="h-4 w-4" checked>
-        <span class="text-neutral-300 truncate">${item.name_raw}</span>
+        <div class="flex-grow min-w-0 flex-shrink-1">
+          <span class="text-neutral-300 truncate block">${item.name_raw}</span>
+        </div>
+        <span class="text-neutral-400 ml-auto whitespace-nowrap">${formatBytes(parseSize(item.size))}</span>
       `;
       elements.resultsList.appendChild(el);
     });
@@ -385,51 +420,28 @@ export default class DownloadUI {
     elements.maintainFolderStructureCheckbox.checked = false;
     this.stateService.set('maintainFolderStructure', false);
 
-    const throttleDownloadCheckbox = document.getElementById('throttle-download-checkbox');
-    const throttleSpeedInput = document.getElementById('throttle-speed-input');
-    const throttleUnitSelect = document.getElementById('throttle-unit-select');
-
-    if (throttleDownloadCheckbox && throttleSpeedInput && throttleUnitSelect) {
-      const isThrottlingEnabled = this.stateService.get('isThrottlingEnabled') || false;
-      const throttleSpeed = this.stateService.get('throttleSpeed') || 100;
-      const throttleUnit = this.stateService.get('throttleUnit') || 'KB/s';
-
-      throttleDownloadCheckbox.checked = isThrottlingEnabled;
-      throttleSpeedInput.disabled = !isThrottlingEnabled;
-      throttleUnitSelect.disabled = !isThrottlingEnabled;
-
-      throttleSpeedInput.value = throttleSpeed;
-      throttleUnitSelect.value = throttleUnit;
-
-      this.stateService.set('isThrottlingEnabled', isThrottlingEnabled);
-      this.stateService.set('throttleSpeed', throttleSpeed);
-      this.stateService.set('throttleUnit', throttleUnit);
-
-      if (!throttleSpeedInput.parentNode.querySelector('.info-icon')) {
-        const infoIcon = new InfoIcon(tooltipContent.throttleSpeed);
-        throttleSpeedInput.parentNode.appendChild(infoIcon.element);
-      }
-    }
-
-    const extractArchivesCheckbox = document.getElementById('extract-archives-checkbox');
+    const { throttleDownloadCheckbox, throttleSpeedInput, throttleUnitSelect, extractArchivesCheckbox, extractPreviouslyDownloadedCheckbox } = elements;
     if (extractArchivesCheckbox) {
       extractArchivesCheckbox.checked = false;
     }
 
-    const extractPreviouslyDownloadedCheckbox = document.getElementById('extract-previously-downloaded-checkbox');
-    if (extractPreviouslyDownloadedCheckbox) {
+    if (extractPreviouslyDownloadedCheckbox && extractArchivesCheckbox) {
       extractPreviouslyDownloadedCheckbox.checked = false;
-      const extractArchivesCheckbox = document.getElementById('extract-archives-checkbox');
-      if (extractArchivesCheckbox) {
-        extractPreviouslyDownloadedCheckbox.disabled = !extractArchivesCheckbox.checked;
-        const parentLabel = extractPreviouslyDownloadedCheckbox.closest('label');
-        if (parentLabel) {
-          if (!extractArchivesCheckbox.checked) {
-            parentLabel.classList.add('disabled-option');
-          } else {
-            parentLabel.classList.remove('disabled-option');
-          }
+      extractPreviouslyDownloadedCheckbox.disabled = !extractArchivesCheckbox.checked;
+      const parentLabel = extractPreviouslyDownloadedCheckbox.closest('label');
+      if (parentLabel) {
+        if (!extractArchivesCheckbox.checked) {
+          parentLabel.classList.add('disabled-option');
+        } else {
+          parentLabel.classList.remove('disabled-option');
         }
+      }
+    } else if (extractPreviouslyDownloadedCheckbox) {
+      extractPreviouslyDownloadedCheckbox.checked = false;
+      extractPreviouslyDownloadedCheckbox.disabled = true;
+      const parentLabel = extractPreviouslyDownloadedCheckbox.closest('label');
+      if (parentLabel) {
+        parentLabel.classList.add('disabled-option');
       }
     }
 
@@ -541,7 +553,7 @@ export default class DownloadUI {
     elements.extractionProgressBar.classList.add('hidden');
     elements.overallExtractionProgressBar.classList.add('hidden');
 
-    this.downloadService.startDownload(this.stateService.get('selectedResults'));
+    this.downloadService.startDownload(this.stateService.get('selectedFilesForDownload'));
   }
 
   /**
@@ -602,11 +614,11 @@ export default class DownloadUI {
     });
 
     document.addEventListener('change', (e) => {
-      const {  
-        throttleSpeedInput, 
-        throttleUnitSelect, 
-        createSubfolderCheckbox, 
-        maintainFolderStructureCheckbox 
+      const {
+        throttleSpeedInput,
+        throttleUnitSelect,
+        createSubfolderCheckbox,
+        maintainFolderStructureCheckbox
       } = this._getElements();
 
       if (e.target.id === 'throttle-download-checkbox') {
@@ -632,15 +644,15 @@ export default class DownloadUI {
         const isChecked = e.target.checked;
         this.stateService.set('createSubfolder', isChecked);
         if (maintainFolderStructureCheckbox) {
-            maintainFolderStructureCheckbox.disabled = isChecked;
-            const label = maintainFolderStructureCheckbox.closest('label');
-            if(label) {
-                label.classList.toggle('disabled-option', isChecked);
-            }
-            if (isChecked) {
-                maintainFolderStructureCheckbox.checked = false;
-                this.stateService.set('maintainFolderStructure', false);
-            }
+          maintainFolderStructureCheckbox.disabled = isChecked;
+          const label = maintainFolderStructureCheckbox.closest('label');
+          if (label) {
+            label.classList.toggle('disabled-option', isChecked);
+          }
+          if (isChecked) {
+            maintainFolderStructureCheckbox.checked = false;
+            this.stateService.set('maintainFolderStructure', false);
+          }
         }
       }
 
@@ -648,18 +660,18 @@ export default class DownloadUI {
         const isChecked = e.target.checked;
         this.stateService.set('maintainFolderStructure', isChecked);
         if (createSubfolderCheckbox) {
-            createSubfolderCheckbox.disabled = isChecked;
-            const label = createSubfolderCheckbox.closest('label');
-            if (label) {
-                label.classList.toggle('disabled-option', isChecked);
-            }
-            if (isChecked) {
-                createSubfolderCheckbox.checked = false;
-                this.stateService.set('createSubfolder', false);
-            }
+          createSubfolderCheckbox.disabled = isChecked;
+          const label = createSubfolderCheckbox.closest('label');
+          if (label) {
+            label.classList.toggle('disabled-option', isChecked);
+          }
+          if (isChecked) {
+            createSubfolderCheckbox.checked = false;
+            this.stateService.set('createSubfolder', false);
+          }
         }
       }
-      
+
       if (e.target.id === 'extract-archives-checkbox') {
         const extractPreviouslyDownloadedCheckbox = document.getElementById('extract-previously-downloaded-checkbox');
         if (extractPreviouslyDownloadedCheckbox) {
@@ -677,6 +689,10 @@ export default class DownloadUI {
           }
         }
       }
+
+      if (e.target.id === 'skip-scan-checkbox') {
+        this.updateScanButtonText();
+      }
     });
 
     window.electronAPI.onDownloadScanProgress(data => {
@@ -691,25 +707,33 @@ export default class DownloadUI {
     window.electronAPI.onDownloadOverallProgress(async data => {
       const elements = this._getElements();
       if (!elements.overallProgress) return;
-      const percent = data.total > 0 ? (data.current / data.total) * 100 : 0;
-      elements.overallProgress.value = percent;
-      const percentFixed = percent.toFixed(1);
-      elements.overallProgressText.textContent =
-        `${await formatBytes(data.current)} / ${await formatBytes(data.total)} (${percentFixed}%)`;
 
-      this.stateService.set('totalBytesDownloadedThisSession', data.current - data.skippedSize);
+      if (data.isFinal) {
+        elements.overallProgress.value = 100;
+        elements.overallProgressText.textContent =
+          `${await formatBytes(data.total)} / ${await formatBytes(data.total)} (100%)`;
+        elements.overallProgressTime.textContent = 'Estimated Time Remaining: --';
+      } else {
+        const percent = data.total > 0 ? (data.current / data.total) * 100 : 0;
+        elements.overallProgress.value = percent;
+        const percentFixed = percent.toFixed(1);
+        elements.overallProgressText.textContent =
+          `${await formatBytes(data.current)} / ${await formatBytes(data.total)} (${percentFixed}%)`;
 
-      const timeElapsed = (Date.now() - this.stateService.get('downloadStartTime')) / 1000;
+        this.stateService.set('totalBytesDownloadedThisSession', data.current - data.skippedSize);
 
-      if (timeElapsed > 1 && this.stateService.get('totalBytesDownloadedThisSession') > 0) {
-        const avgSpeed = this.stateService.get('totalBytesDownloadedThisSession') / timeElapsed;
-        const sizeRemaining = data.total - data.current;
+        const timeElapsed = (Date.now() - this.stateService.get('downloadStartTime')) / 1000;
 
-        if (avgSpeed > 0 && sizeRemaining > 0) {
-          const secondsRemaining = sizeRemaining / avgSpeed;
-          elements.overallProgressTime.textContent = `Estimated Time Remaining: ${formatTime(secondsRemaining)}`;
-        } else {
-          elements.overallProgressTime.textContent = "Estimated Time Remaining: --";
+        if (timeElapsed > 1 && this.stateService.get('totalBytesDownloadedThisSession') > 0) {
+          const avgSpeed = this.stateService.get('totalBytesDownloadedThisSession') / timeElapsed;
+          const sizeRemaining = data.total - data.current;
+
+          if (avgSpeed > 0 && sizeRemaining > 0) {
+            const secondsRemaining = sizeRemaining / avgSpeed;
+            elements.overallProgressTime.textContent = `Estimated Time Remaining: ${formatTime(secondsRemaining)}`;
+          } else {
+            elements.overallProgressTime.textContent = "Estimated Time Remaining: --";
+          }
         }
       }
     });
@@ -742,6 +766,8 @@ export default class DownloadUI {
       this._restoreDownloadOptions();
 
       const elements = this._getElements();
+      if (elements.overallProgress) elements.overallProgress.value = 100;
+      if (elements.overallProgressText) elements.overallProgressText.textContent = 'Completed';
       if (elements.downloadScanBtn) elements.downloadScanBtn.disabled = false;
       if (elements.downloadDirBtn) elements.downloadDirBtn.disabled = false;
       if (elements.downloadCancelBtn) {

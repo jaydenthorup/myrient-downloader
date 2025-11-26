@@ -52,16 +52,24 @@ class MyrientService {
     const links = [];
     $('a').each((i, el) => {
       const href = $(el).attr('href');
+
       if (href &&
         !href.startsWith('?') &&
         !href.startsWith('http') &&
         !href.startsWith('/') &&
         !href.split('/').includes('..') &&
         href !== './') {
+        const isDir = href.endsWith('/');
+        const name = decodeURIComponent(href.replace(/\/$/, ''));
+
+        const size = isDir ? null : $(el).closest('tr').find('td.size').text().trim();
+
+
         links.push({
-          name: decodeURIComponent(href.replace(/\/$/, '')),
+          name: name,
           href: href,
-          isDir: href.endsWith('/')
+          isDir: isDir,
+          size: size || null
         });
       }
     });
@@ -122,7 +130,10 @@ class MyrientService {
         subdirectories.push(link);
       } else {
         const absoluteFileUrl = new URL(link.href, url).toString();
-        const relativeHref = absoluteFileUrl.replace(baseUrl, '');
+        let relativeHref = absoluteFileUrl.replace(baseUrl, '');
+        if (relativeHref.startsWith('/')) {
+          relativeHref = relativeHref.substring(1);
+        }
         currentLevelFiles.push({ ...link, href: relativeHref, type: 'file' });
       }
     });

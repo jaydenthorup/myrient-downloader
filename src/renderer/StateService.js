@@ -1,4 +1,5 @@
 import { MYRIENT_BASE_URL } from '../shared/constants/appConstants.js';
+import { parseSize } from '../shared/utils/formatters.js';
 
 /**
  * Manages the application's state, providing methods to get and set state properties.
@@ -48,9 +49,9 @@ class StateService {
       archive: { name: '', href: '' },
       directory: { name: '', href: '' },
       allFiles: [],
-      allTags: [],
       finalFileList: [],
-      selectedResults: [],
+      selectedFilesForDownload: [],
+      totalSelectedDownloadSize: 0,
       downloadDirectory: null,
       prioritySortable: null,
       availableSortable: null,
@@ -87,7 +88,8 @@ class StateService {
    * @memberof StateService
    */
   resetWizardState() {
-    this.state.selectedResults = [];
+    this.state.finalFileList = [];
+    this.state.selectedFilesForDownload = [];
     this.state.includeTags = {
       region: [],
       language: [],
@@ -127,6 +129,15 @@ class StateService {
    */
   set(key, value) {
     this.state[key] = value;
+  }
+
+  /**
+   * Sets the array of files selected by the user for download and calculates their total size.  
+   * @param {Array<object>} files The array of file objects selected for download. Each file object should have a 'size' property (in bytes).
+   */
+  setSelectedFilesForDownload(files) {
+    this.state.selectedFilesForDownload = files;
+    this.state.totalSelectedDownloadSize = files.reduce((acc, file) => acc + (parseSize(file.size) || 0), 0);
   }
 }
 

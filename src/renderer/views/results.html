@@ -4,7 +4,12 @@
     <p class="text-gray-400 mb-4">Found <span id="results-file-count" class="font-bold text-white">0</span>
       matching files out of <span id="results-total-count" class="font-bold text-white">0</span> total.
     </p>
-    <p id="results-selected-count" class="text-gray-400">
+    <p class="text-gray-400 flex items-center">
+      <span id="results-selected-count">
+        Selected to Download: <span class="font-bold text-white">0</span>
+      </span>
+      <span class="ml-4">Estimated Total Size: <span id="total-selected-download-size" class="font-bold text-white">0
+          Bytes</span></span>
     </p>
   </div>
   <div class="search-container mt-2 mb-4">
@@ -32,7 +37,8 @@
       <label for="maintain-folder-structure-checkbox"
         class="flex items-center p-2 bg-neutral-800 rounded-md space-x-2 cursor-pointer border border-transparent hover:border-accent-500 hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-accent-500 select-none">
         <input type="checkbox" id="maintain-folder-structure-checkbox">
-        <span id="maintain-folder-structure-label" class="text-neutral-300 truncate">Maintain site folder structure</span>
+        <span id="maintain-folder-structure-label" class="text-neutral-300 truncate">Maintain site folder
+          structure</span>
       </label>
 
       <label for="create-subfolder-checkbox"
@@ -53,6 +59,12 @@
         <span id="extract-previously-downloaded-label" class="text-neutral-300 truncate">Extract previously downloaded
           archives</span>
       </label>
+      <label for="skip-scan-checkbox"
+        class="flex items-center p-2 bg-neutral-800 rounded-md space-x-2 cursor-pointer border border-transparent hover:border-accent-500 hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-accent-500 select-none">
+        <input type="checkbox" id="skip-scan-checkbox">
+        <span id="skip-scan-label" class="text-neutral-300 truncate">Skip pre-download scan</span>
+      </label>
+
       <div id="throttle-container" class="flex items-center p-2 bg-neutral-800 rounded-md space-x-2">
         <label for="throttle-download-checkbox" class="text-neutral-300 flex-shrink-0">
           <input type="checkbox" id="throttle-download-checkbox" class="mr-2">Throttle download speed:
@@ -66,6 +78,7 @@
           <option value="KB/s">KB/s</option>
           <option value="MB/s">MB/s</option>
         </select>
+        <span id="throttle-info-icon-container"></span>
       </div>
     </div>
 
