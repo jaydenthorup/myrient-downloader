@@ -148,6 +148,7 @@ class WizardManager {
     });
 
     this.updatePriorityBuilderAvailableTags();
+    this.uiManager.searchManager.refreshSearchPlaceholders();
   }
 
   /**
@@ -237,7 +238,7 @@ class WizardManager {
       document.getElementById(`select-all-tags-${category}-include-btn`).addEventListener('click', () => this._massUpdateTags(category, 'include', true));
       document.getElementById(`deselect-all-tags-${category}-include-btn`).addEventListener('click', () => this._massUpdateTags(category, 'include', false));
       document.getElementById(`select-all-tags-${category}-exclude-btn`).addEventListener('click', () => this._massUpdateTags(category, 'exclude', true));
-      document.getElementById(`select-all-tags-${category}-exclude-btn`).addEventListener('click', () => this._massUpdateTags(category, 'exclude', false));
+      document.getElementById(`deselect-all-tags-${category}-exclude-btn`).addEventListener('click', () => this._massUpdateTags(category, 'exclude', false));
     });
 
     const addString = (type) => {
