@@ -22,7 +22,7 @@ class KeyboardNavigator {
     this.listContainers = Array.isArray(listContainers) ? listContainers : [listContainers];
     this.itemSelector = itemSelector;
     this.searchInputs = Array.isArray(searchInputs) ? searchInputs : [searchInputs];
-    this.searchInput = this.searchInputs[0]; // For backward compatibility
+    this.searchInput = this.searchInputs[0];
     this.uiManager = uiManager;
     this.navigableElements = navigableElements;
     this.listToInputMap = listToInputMap;
@@ -305,7 +305,7 @@ class KeyboardNavigator {
    */
   handleArrowUpKey(visibleItems, focusedItemIndex, columnCount) {
     if (focusedItemIndex === -1) {
-      if (this.searchInput) { // Maintain backward compatibility
+      if (this.searchInput) {
         this.searchInput.focus();
       }
       return;

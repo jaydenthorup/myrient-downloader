@@ -122,6 +122,13 @@ class PresetsManager {
   }
 
   /**
+   * Initializes tooltips for the presets panel.
+   */
+  initializePresetsTooltips() {
+    this.uiManager.addInfoIconToElement('manage-presets-heading', 'managePresetsHeading');
+  }
+
+  /**
    * Adds event listeners for the preset management controls (import, export, delete, etc.).
    */
   addEventListeners() {
@@ -131,6 +138,7 @@ class PresetsManager {
     const deleteSelectedBtn = this.viewContainer.querySelector('#delete-selected-btn');
     const selectAllBtn = this.viewContainer.querySelector('#select-all-btn');
     const deselectAllBtn = this.viewContainer.querySelector('#deselect-all-btn');
+
 
     importButton.addEventListener('click', async () => {
       const result = await window.electronAPI.importFilters();

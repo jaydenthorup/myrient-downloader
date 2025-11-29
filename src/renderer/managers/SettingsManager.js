@@ -14,13 +14,22 @@ class SettingsManager {
   /**
    * Creates an instance of SettingsManager.
    * Initializes references to settings panel DOM elements and sets up event listeners.
+   * @param {UIManager} uiManager The UIManager instance.
    */
-  constructor() {
+  constructor(uiManager) {
+    this.uiManager = uiManager;
     this.settingsBtn = document.getElementById('settings-btn');
     this.settingsPanel = document.getElementById('settings-panel');
     this.settingsOverlay = document.getElementById('settings-overlay');
     this.closeSettingsBtn = document.getElementById('close-settings-btn');
+  }
+
+  /**
+   * Sets up event listeners and initializes tooltips for the settings panel.
+   */
+  setupSettings() {
     this.setupEventListeners();
+    this.uiManager.addInfoIconToElement('zoom-heading', 'zoomHeading');
   }
 
   /**
@@ -28,8 +37,6 @@ class SettingsManager {
    * @memberof SettingsManager
    */
   setupEventListeners() {
-    // Event listener for settingsBtn moved to renderer.js for exclusivity management
-
     this.closeSettingsBtn.addEventListener('click', () => this.closeSettings());
     this.settingsOverlay.addEventListener('click', () => this.closeSettings());
 

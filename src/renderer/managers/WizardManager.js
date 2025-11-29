@@ -327,6 +327,8 @@ class WizardManager {
     this.uiManager.addInfoIconToElement('filter-dedupe-mode-label', 'dedupeMode');
     this.uiManager.addInfoIconToElement('priority-list-label', 'priorityList');
     this.uiManager.addInfoIconToElement('priority-available-label', 'availableTags');
+    this.uiManager.addInfoIconToElement('filter-presets-heading', 'filterPresetsHeading');
+    this.uiManager.addInfoIconToElement('filter-preset-save-heading', 'filterPresetSaveHeading');
 
     const stringFilterLists = [this.stringIncludeList, this.stringExcludeList];
     const stringFilterInputs = [this.stringIncludeInput, this.stringExcludeInput];

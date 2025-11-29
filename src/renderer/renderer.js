@@ -37,7 +37,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   uiManager.setDownloadUI(downloadUI);
   await uiManager.viewManager.loadViews();
 
-  const settingsManager = new SettingsManager();
+  const settingsManager = new SettingsManager(uiManager);
+  settingsManager.setupSettings();
 
   /**
    * Loads the main archives from the Myrient service and populates the archives view.
@@ -265,6 +266,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     settingsManager.closeSettings();
     presetsManager.loadPresets();
     presetsManager.renderPresets();
+    presetsManager.initializePresetsTooltips();
   }
 
   /**

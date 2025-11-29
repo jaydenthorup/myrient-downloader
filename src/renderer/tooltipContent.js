@@ -51,7 +51,11 @@ const tooltipContent = {
   fileExtractionProgress: "Shows the progress for the currently extracting archive.",
   throttleSpeed: "Limit the download speed to the specified value. This is useful for managing bandwidth usage. You can set the speed in Kilobytes per second (KB/s) or Megabytes per second (MB/s).",
   skipScan: "Skips the pre-download scan that gets the exact size of each file. This makes the download start faster, but progress bars and time estimates will be less accurate. The ability to skip already-downloaded files will also be disabled.",
-  downloadOptions: "Configure how files are downloaded and processed."
+  downloadOptions: "Configure how files are downloaded and processed.",
+  zoomHeading: "Adjust the user interface's zoom level to your preference. Changes here will apply to the entire application.",
+  filterPresetsHeading: "Load a previously saved filter configuration. Presets are specific to the current archive and directory selection.",
+  managePresetsHeading: "View, import, export, and delete your saved filter presets.",
+  filterPresetSaveHeading: "Save your current filter configuration as a preset for quick access later. Presets are specific to the archive and directory you are currently viewing."
 };
 
 export default tooltipContent;
