@@ -16,30 +16,15 @@ class MyrientDataManager {
     }
 
     /**
-     * Asynchronously retrieves the main archives from Myrient.
+     * Asynchronously retrieves a list of directories for a given URL from Myrient.
      * @memberof MyrientDataManager
-     * @returns {Promise<{data: Array<object>}|{error: string}>} A promise that resolves with an object containing either
-     * an array of main archives (data) or an error message if the operation fails.
-     */
-    async getMainArchives() {
-        try {
-            const data = await this.myrientService.getMainArchives(MYRIENT_BASE_URL);
-            return { data };
-        } catch (e) {
-            return { error: e.message };
-        }
-    }
-
-    /**
-     * Asynchronously retrieves a list of directories for a given archive URL from Myrient.
-     * @memberof MyrientDataManager
-     * @param {string} archiveUrl The URL of the archive to retrieve the directory list from.
+     * @param {string} url The URL to retrieve the directory list from.
      * @returns {Promise<{data: Array<object>}|{error: string}>} A promise that resolves with an object containing either
      * an array of directory items (data) or an error message if the operation fails.
      */
-    async getDirectoryList(archiveUrl) {
+    async getDirectory(url) {
         try {
-            const response = await this.myrientService.getDirectoryList(archiveUrl);
+            const response = await this.myrientService.getDirectory(url);
             return response;
         } catch (e) {
             return { error: e.message };

@@ -77,25 +77,13 @@ class MyrientService {
   }
 
   /**
-   * Fetches and parses the main archive directories from a given URL.
+   * Fetches and parses the list of directories from a given URL.
+   * This method replaces the previous `getMainArchives` and `getDirectoryList` methods.
    * @memberof MyrientService
-   * @param {string} url The URL of the Myrient base page.
-   * @returns {Promise<Array<{name: string, href: string, isDir: boolean}>>} A promise that resolves with an array of archive directory link objects.
+   * @param {string} url The URL to fetch directories from.
+   * @returns {Promise<{data: Array<{name: string, href: string, isDir: boolean}>>}>} A promise that resolves with an object containing a sorted array of directory link objects.
    */
-  async getMainArchives(url) {
-    const html = await this.getPage(url);
-    const links = this.parseLinks(html);
-    return links.filter(link => link.isDir);
-  }
-
-  /**
-   * Fetches and parses the list of directories within a given archive URL.
-   * @memberof MyrientService
-   * @param {string} url The URL of the archive directory.
-   * @returns {Promise<{data: Array<{name: string, href: string, isDir: boolean}>}>} A promise that resolves with an object containing a sorted array of directory link objects.
-   *                                                                                The array is sorted alphabetically by name.
-   */
-  async getDirectoryList(url) {
+  async getDirectory(url) {
     const html = await this.getPage(url);
     const links = this.parseLinks(html).filter(link => link.isDir);
     return { data: links.sort((a, b) => a.name.localeCompare(b.name)) };

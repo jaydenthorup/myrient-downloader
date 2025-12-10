@@ -29,7 +29,7 @@ class ViewManager {
    * @returns {Promise<void>} A promise that resolves when all views are loaded.
    */
   async loadViews() {
-    const viewFiles = ['archives', 'directories', 'wizard', 'results'];
+    const viewFiles = ['directories', 'wizard', 'results'];
     for (const view of viewFiles) {
       const response = await fetch(`./views/${view}.html`);
       this.views[view] = await response.text();

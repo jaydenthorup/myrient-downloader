@@ -27,13 +27,13 @@ class BreadcrumbManager {
                 </svg>
             </span>
         `;
-        let html = `<span title="Myrient Downloader" class="truncate cursor-pointer hover:text-orange-500 transition-all duration-200" data-view="archives" data-step="0">Myrient Downloader</span>`;
-        if (stateService.get('archive').name) {
-            html += `${separator}<span title="${stateService.get('archive').name}" class="truncate cursor-pointer hover:text-orange-500 transition-all duration-200" data-view="directories" data-step="1">${stateService.get('archive').name}</span>`;
-        }
-        if (stateService.get('directory').name) {
-            html += `${separator}<span title="${stateService.get('directory').name}" class="truncate hover:text-orange-500 transition-all duration-200">${stateService.get('directory').name}</span>`;
-        }
+        let html = `<span title="Myrient Downloader" class="truncate cursor-pointer hover:text-orange-500 transition-all duration-200" data-step="0">Myrient Downloader</span>`;
+        const directoryStack = stateService.get('directoryStack') || [];
+        directoryStack.forEach((item, index) => {
+            const isLast = index === directoryStack.length - 1;
+            const clickableClasses = isLast ? '' : 'cursor-pointer hover:text-orange-500';
+            html += `${separator}<span title="${item.name}" class="truncate transition-all duration-200 ${clickableClasses}" data-step="${index + 1}">${item.name}</span>`;
+        });
         this.breadcrumbs.innerHTML = html;
     }
 }

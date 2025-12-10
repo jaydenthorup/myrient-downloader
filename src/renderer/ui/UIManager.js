@@ -26,11 +26,11 @@ class UIManager {
   /**
    * Creates an instance of UIManager.
    * @param {HTMLElement} viewContainer The DOM element where views will be loaded.
-   * @param {function(): void} loadArchivesCallback Callback function to load archives.
+   * @param {function(): void} loadDirectoryCallback Callback function to load a directory.
    */
-  constructor(viewContainer, loadArchivesCallback, presetsManager) {
+  constructor(viewContainer, loadDirectoryCallback, presetsManager) {
     this.viewContainer = viewContainer;
-    this.loadArchivesCallback = loadArchivesCallback;
+    this.loadDirectoryCallback = loadDirectoryCallback;
     this.presetsManager = presetsManager;
 
     this.viewManager = new ViewManager(viewContainer);
@@ -304,11 +304,10 @@ class UIManager {
       });
 
       document.getElementById('download-restart-btn').addEventListener('click', () => {
-        stateService.set('archive', { name: '', href: '' });
-        stateService.set('directory', { name: '', href: '' });
+        stateService.set('directoryStack', []);
         stateService.resetWizardState();
 
-        this.loadArchivesCallback();
+        this.loadDirectoryCallback();
       });
     }
   }
