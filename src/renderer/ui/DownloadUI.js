@@ -299,13 +299,13 @@ export default class DownloadUI {
     }
 
     const finalFileList = this.stateService.get('finalFileList');
+    const fileMap = new Map(finalFileList.map(f => [f.name_raw.trim(), f]));
     const checkedCheckboxes = elements.resultsList.querySelectorAll('input[type=checkbox]:checked');
 
     const updatedSelectedResults = Array.from(checkedCheckboxes)
       .map(cb => {
         const name = cb.parentElement.dataset.name.trim();
-        const file = finalFileList.find(f => f.name_raw && f.name_raw.trim() === name);
-        return file;
+        return fileMap.get(name);
       })
       .filter(Boolean);
 
@@ -459,8 +459,9 @@ export default class DownloadUI {
       }
     }
 
-    this._updateSelectionState();
-    this.updateScanButtonText();
+    this.stateService.setSelectedFilesForDownload([...finalFileList]);
+    this.updateSelectedCount();
+    this._updateTotalDownloadSizeDisplay();
     this.updateScanButtonState();
 
     if (this.resultsListChangeListener) {
@@ -616,14 +617,20 @@ export default class DownloadUI {
         elements.resultsList.querySelectorAll('label:not(.hidden) input[type=checkbox]').forEach(checkbox => {
           checkbox.checked = true;
         });
-        this._updateSelectionState();
+        this.stateService.setSelectedFilesForDownload([...this.stateService.get('finalFileList')]);
+        this.updateSelectedCount();
+        this._updateTotalDownloadSizeDisplay();
+        this.updateScanButtonState();
       }
 
       if (e.target.id === 'deselect-all-results-btn') {
         elements.resultsList.querySelectorAll('label:not(.hidden) input[type=checkbox]').forEach(checkbox => {
           checkbox.checked = false;
         });
-        this._updateSelectionState();
+        this.stateService.setSelectedFilesForDownload([]);
+        this.updateSelectedCount();
+        this._updateTotalDownloadSizeDisplay();
+        this.updateScanButtonState();
       }
     });
 
