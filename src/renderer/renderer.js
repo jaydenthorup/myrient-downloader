@@ -178,7 +178,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('breadcrumbs').addEventListener('click', (e) => {
     if (stateService.get('isDownloading')) return;
-    if (e.target.dataset.step !== undefined) {
+    if (e.target.dataset.step !== undefined && e.target.classList.contains('cursor-pointer')) {
       const step = parseInt(e.target.dataset.step, 10);
       const currentStack = stateService.get('directoryStack') || [];
       const newStack = currentStack.slice(0, step);
