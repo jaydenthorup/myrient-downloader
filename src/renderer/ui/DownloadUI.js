@@ -431,10 +431,14 @@ export default class DownloadUI {
     };
 
     if (this.virtualList) {
-      this.virtualList.allItems = finalFileList;
       this.virtualList.updateItems(finalFileList);
     } else {
-      this.virtualList = new VirtualList(elements.resultsList, finalFileList, rowRenderer, 40, 8);
+      this.virtualList = new VirtualList(elements.resultsList, {
+        items: finalFileList,
+        rowRenderer,
+        rowHeight: 40,
+        spacing: 8,
+      });
     }
 
     elements.createSubfolderCheckbox.checked = false;
@@ -649,7 +653,7 @@ export default class DownloadUI {
         this._updateTotalDownloadSizeDisplay();
         this.updateSelectedCount();
         this.updateScanButtonState();
-        this.virtualList.updateItems(displayedItems);
+        this.virtualList.displayItems(displayedItems);
       }
 
       if (e.target.id === 'deselect-all-results-btn') {
@@ -665,7 +669,7 @@ export default class DownloadUI {
         this._updateTotalDownloadSizeDisplay();
         this.updateSelectedCount();
         this.updateScanButtonState();
-        this.virtualList.updateItems(displayedItems);
+        this.virtualList.displayItems(displayedItems);
       }
     });
 

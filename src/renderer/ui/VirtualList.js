@@ -6,12 +6,13 @@ export default class VirtualList {
     /**
      * Creates an instance of VirtualList.
      * @param {HTMLElement} container - The scrollable container element for the list.
-     * @param {Array<object>} items - The full list of items to render.
-     * @param {function(object): HTMLElement} rowRenderer - A function that takes an item and returns the DOM element for its row.
-     * @param {number} rowHeight - The fixed height of each row in pixels.
-     * @param {number} [spacing=0] - The space between rows in pixels.
+     * @param {object} options - The options for the virtual list.
+     * @param {Array<object>} [options.items=[]] - The full list of items to render.
+     * @param {function(object): HTMLElement} options.rowRenderer - A function that takes an item and returns the DOM element for its row.
+     * @param {number} options.rowHeight - The fixed height of each row in pixels.
+     * @param {number} [options.spacing=0] - The space between rows in pixels.
      */
-    constructor(container, items, rowRenderer, rowHeight, spacing = 0) {
+    constructor(container, { items = [], rowRenderer, rowHeight, spacing = 0 }) {
         this.container = container;
         this.allItems = items; // Store the original, unfiltered list
         this.items = items;
@@ -40,7 +41,7 @@ export default class VirtualList {
      * @private
      */
     _calculateTotalHeight() {
-        if (this.items.length === 0) {
+        if (!this.items || this.items.length === 0) {
             this.totalHeight = 0;
             return;
         }
@@ -52,6 +53,7 @@ export default class VirtualList {
      * It adds new visible items to the DOM and removes items that are no longer visible.
      */
     render() {
+        if (!this.items) return;
         const scrollTop = this.container.scrollTop;
         const containerHeight = this.container.clientHeight;
         const rowHeightWithSpacing = this.rowHeight + this.spacing;
@@ -104,36 +106,47 @@ export default class VirtualList {
         this.renderedItems.clear();
     }
 
-    /**
-     * Updates the list with a new set of items and re-renders.
-     * @param {Array<object>} newItems - The new list of items.
-     */
-    updateItems(newItems) {
-        this.items = newItems;
+      /**
+       * Updates the currently displayed items and re-renders the list.
+       * @param {Array<object>} itemsToDisplay - The new list of items to display.
+       */
+      displayItems(itemsToDisplay) {
+        this.items = itemsToDisplay;
         this._calculateTotalHeight();
         this.content.style.height = `${this.totalHeight}px`;
-
-        // Clear existing rendered items before re-rendering
+    
         for (const node of this.renderedItems.values()) {
-            if (node.parentNode === this.content) {
-                this.content.removeChild(node);
-            }
+          if (node.parentNode === this.content) {
+            this.content.removeChild(node);
+          }
         }
         this.renderedItems.clear();
         this.render();
-    }
-
-    /**
-     * Filters the list based on a search query and triggers a re-render.
-     * @param {string} query - The search query.
-     */
-    search(query) {
+      }
+    
+      /**
+       * Updates the master list of items and re-renders.
+       * @param {Array<object>} newItems - The new master list of items.
+       */
+      updateItems(newItems) {
+        this.allItems = newItems;
+        this.displayItems(newItems);
+      }
+    
+      /**
+       * Filters the list based on a search query and triggers a re-render.
+       * @param {string} query - The search query.
+       */
+      search(query) {
         const lowerCaseQuery = query.toLowerCase();
-        const filteredItems = this.allItems.filter(item => {
-            const name = (item.name_raw || item.name || '').toLowerCase();
+        let filteredItems;
+        if (!query) {
+          filteredItems = this.allItems;
+        } else {
+          filteredItems = this.allItems.filter(item => {
+            const name = (item.name_raw || item.name || item.tag || '').toLowerCase();
             return name.includes(lowerCaseQuery);
-        });
-
-        this.updateItems(filteredItems);
-    }
-}
+          });
+        }
+        this.displayItems(filteredItems);
+      }}

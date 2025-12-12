@@ -2,6 +2,7 @@ import stateService from '../StateService.js';
 import filterPersistenceService from '../services/FilterPersistenceService.js';
 import toastManager from './ToastManager.js';
 import KeyboardNavigator from '../ui/KeyboardNavigator.js';
+import VirtualList from '../ui/VirtualList.js';
 
 /**
  * Manages the wizard interface, handling setup of filters, tag categorization, and priority lists.
@@ -14,6 +15,7 @@ class WizardManager {
    */
   constructor(uiManager) {
     this.uiManager = uiManager;
+    this.virtualLists = {};
 
     stateService.subscribe('savedFilters', (updatedFilters) => {
       this._repopulatePresetsSelect(updatedFilters);
@@ -309,6 +311,20 @@ class WizardManager {
     this.clearStringIncludeListBtn = document.getElementById('clear-string-include-list-btn');
     this.clearStringExcludeListBtn = document.getElementById('clear-string-exclude-list-btn');
 
+    const categories = ['region', 'language', 'other'];
+    categories.forEach(category => {
+      ['include', 'exclude'].forEach(type => {
+        const elementId = `wizard-tags-list-${category}-${type}`;
+        const listEl = document.getElementById(elementId);
+        if (listEl) {
+          this.virtualLists[`${category}-${type}`] = new VirtualList(listEl, {
+            rowRenderer: this._rowRenderer.bind(this),
+            rowHeight: 44,
+          });
+        }
+      });
+    });
+
     await this._loadAndPopulatePresets();
     this._updateUIFromState();
 
@@ -360,7 +376,7 @@ class WizardManager {
     if (e.target.type !== 'checkbox') return;
     const listContainer = e.currentTarget;
     const category = listContainer.id.split('-')[3];
-    const { name: tagName } = e.target.parentElement.dataset;
+    const { name: tagName } = e.target.closest('label').dataset;
     const { tagType } = e.target.dataset;
     const { checked: isChecked } = e.target;
 
@@ -388,21 +404,19 @@ class WizardManager {
    * @private
    */
   _massUpdateTags(category, type, shouldSelect) {
-    const includeListEl = document.getElementById(`wizard-tags-list-${category}-include`);
-    const excludeListEl = document.getElementById(`wizard-tags-list-${category}-exclude`);
+    const virtualList = this.virtualLists[`${category}-${type}`];
+    if (!virtualList) return;
+
+    const visibleItems = virtualList.items;
+    const visibleTags = visibleItems.map(item => item.tag);
 
     const includeTags = new Set(stateService.get('includeTags')[category]);
     const excludeTags = new Set(stateService.get('excludeTags')[category]);
-
+  
     const tagsToUpdate = type === 'include' ? includeTags : excludeTags;
     const opposingTags = type === 'include' ? excludeTags : includeTags;
-
-    const listToUpdate = type === 'include' ? includeListEl : excludeListEl;
-    const otherList = type === 'include' ? excludeListEl : includeListEl;
-
-    // First, update the state sets based on the mass action
-    listToUpdate.querySelectorAll('label:not(.hidden) input[type=checkbox]').forEach(checkbox => {
-      const tagName = checkbox.parentElement.dataset.name;
+  
+    visibleTags.forEach(tagName => {
       if (shouldSelect) {
         if (!opposingTags.has(tagName)) {
           tagsToUpdate.add(tagName);
@@ -411,37 +425,11 @@ class WizardManager {
         tagsToUpdate.delete(tagName);
       }
     });
-
+  
     stateService.get('includeTags')[category] = Array.from(includeTags);
     stateService.get('excludeTags')[category] = Array.from(excludeTags);
-
-    // Now, update the DOM for both lists based on the new state
-    const allCheckboxes = [
-      ...includeListEl.querySelectorAll('label input[type=checkbox]'),
-      ...excludeListEl.querySelectorAll('label input[type=checkbox]'),
-    ];
-
-    allCheckboxes.forEach(checkbox => {
-      const tagName = checkbox.parentElement.dataset.name;
-      const tagType = checkbox.dataset.tagType;
-      const isIncluded = includeTags.has(tagName);
-      const isExcluded = excludeTags.has(tagName);
-
-      checkbox.checked = (tagType === 'include' && isIncluded) || (tagType === 'exclude' && isExcluded);
-
-      const shouldBeDisabled = (tagType === 'include' && isExcluded) || (tagType === 'exclude' && isIncluded);
-      checkbox.disabled = shouldBeDisabled;
-      const label = checkbox.parentElement;
-      if (shouldBeDisabled) {
-        label.classList.add('opacity-50', 'cursor-not-allowed');
-        label.style.pointerEvents = 'none';
-      } else {
-        label.classList.remove('opacity-50', 'cursor-not-allowed');
-        label.style.pointerEvents = 'auto';
-      }
-    });
-
-    this.updatePriorityBuilderAvailableTags();
+  
+    this._updateUIFromState();
   }
 
   /**
@@ -457,37 +445,49 @@ class WizardManager {
 
     if (!includeListEl || !excludeListEl) return;
 
-    includeListEl.innerHTML = '';
-    excludeListEl.innerHTML = '';
     allCategoryTags.sort((a, b) => a.localeCompare(b));
 
-    const renderTagItem = (tag, type) => {
-      const isIncluded = currentIncludeTags.includes(tag);
-      const isExcluded = currentExcludeTags.includes(tag);
+    const createItems = (type) => allCategoryTags.map(tag => ({
+      tag,
+      type,
+      category,
+      isIncluded: currentIncludeTags.includes(tag),
+      isExcluded: currentExcludeTags.includes(tag),
+    }));
 
-      const el = document.createElement('label');
-      el.className = 'flex items-center p-2 bg-neutral-900 rounded-md space-x-2 cursor-pointer border border-transparent hover:border-accent-500 hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-accent-500 select-none';
-      el.dataset.name = tag;
-      el.tabIndex = 0;
+    this.virtualLists[`${category}-include`].updateItems(createItems('include'));
+    this.virtualLists[`${category}-exclude`].updateItems(createItems('exclude'));
+  }
 
-      let checkboxHtml = `<input type="checkbox" class="h-4 w-4" data-tag-type="${type}"`;
-      if ((type === 'include' && isIncluded) || (type === 'exclude' && isExcluded)) {
-        checkboxHtml += ' checked';
-      }
-      if ((type === 'include' && isExcluded) || (type === 'exclude' && isIncluded)) {
-        checkboxHtml += ' disabled';
-        el.classList.add('opacity-50', 'cursor-not-allowed');
-        el.style.pointerEvents = 'none';
-      }
-      checkboxHtml += '>';
-      el.innerHTML = `${checkboxHtml}<span class="text-neutral-300">${tag}</span>`;
-      return el;
-    };
+  /**
+   * Renders a single tag item for the virtual lists.
+   * @param {object} item - The tag item data.
+   * @returns {HTMLElement} The rendered DOM element for the row.
+   * @private
+   */
+  _rowRenderer(item) {
+    const { tag, type, isIncluded, isExcluded } = item;
 
-    allCategoryTags.forEach(tag => {
-      includeListEl.appendChild(renderTagItem(tag, 'include'));
-      excludeListEl.appendChild(renderTagItem(tag, 'exclude'));
-    });
+    const el = document.createElement('label');
+    el.className = 'flex items-center p-2 bg-neutral-900 rounded-md space-x-2 cursor-pointer border border-transparent hover:border-accent-500 hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-accent-500 select-none';
+    el.dataset.name = tag;
+
+    let checkboxHtml = `<input type="checkbox" class="h-4 w-4" data-tag-type="${type}"`;
+    if ((type === 'include' && isIncluded) || (type === 'exclude' && isExcluded)) {
+      checkboxHtml += ' checked';
+    }
+    if ((type === 'include' && isExcluded) || (type === 'exclude' && isIncluded)) {
+      checkboxHtml += ' disabled';
+      el.classList.add('opacity-50', 'cursor-not-allowed');
+      el.style.pointerEvents = 'none';
+    }
+    checkboxHtml += '>';
+    el.innerHTML = `${checkboxHtml}<span class="text-neutral-300">${tag}</span>`;
+
+    const wrapper = document.createElement('div');
+    wrapper.style.height = '44px';
+    wrapper.appendChild(el);
+    return wrapper;
   }
 
   /**
