@@ -13,6 +13,11 @@ class MyrientDataManager {
      */
     constructor(myrientService) {
         this.myrientService = myrientService;
+        this.allFiles = [];
+    }
+
+    getAllFiles() {
+        return this.allFiles;
     }
 
     /**
@@ -41,7 +46,13 @@ class MyrientDataManager {
     async scrapeAndParseFiles(pageUrl) {
         try {
             const response = await this.myrientService.scrapeAndParseFiles(pageUrl);
-            return response;
+            if (response.error) {
+                return response;
+            }
+            this.allFiles = response.files;
+            return {
+                tags: response.tags,
+            };
         } catch (e) {
             return { error: e.message };
         }

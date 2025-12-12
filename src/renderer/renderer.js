@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         uiManager.populateFiles('list-files', content.files);
 
         const downloadBtn = document.getElementById('download-from-here-btn');
-        if (directoryStack.length >= 2) {
+        if (directoryStack.length >= 1) {
           downloadBtn.classList.remove('hidden');
           downloadBtn.onclick = () => {
             stateService.set('downloadFromHere', true); // User chose to download from this level
@@ -96,27 +96,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Unlike before, we don't reset the wizard state here based on item href,
     // as the directoryStack is the source of truth for navigation state.
     // Resetting should happen when navigating via breadcrumbs or back button.
-    uiManager.showLoading('Scanning files...');
+    uiManager.showLoading('Scanning files...', 'Depending on how many files the directory contains this can take some time.');
     try {
-      const { hasSubdirectories } = await myrientDataService.scrapeAndParseFiles();
-
-      if (hasSubdirectories) {
-        const defaultFilters = {
-          include_tags: [],
-          exclude_tags: [],
-          include_strings: [],
-          exclude_strings: [],
-          rev_mode: 'all',
-          dedupe_mode: 'all',
-          priority_list: [],
-        };
-        await filterService.runFilter(defaultFilters);
-        uiManager.showView('results');
-        downloadUI.populateResults(hasSubdirectories);
-        stateService.set('wizardSkipped', true);
-        uiManager.hideLoading();
-        return;
-      }
+      await myrientDataService.scrapeAndParseFiles();
 
       uiManager.hideLoading();
       const userWantsToFilter = await uiManager.showConfirmationModal(
@@ -146,7 +128,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           };
           await filterService.runFilter(defaultFilters);
           uiManager.showView('results');
-          downloadUI.populateResults(hasSubdirectories);
+          downloadUI.populateResults();
           stateService.set('wizardSkipped', true);
           uiManager.hideLoading();
         }, 0);

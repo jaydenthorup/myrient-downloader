@@ -36,9 +36,7 @@ class MyrientDataService {
     if (result.error) {
       throw new Error(result.error);
     }
-    stateService.set('allFiles', result.files);
     stateService.set('allTags', result.tags);
-    return { files: result.files, tags: result.tags, hasSubdirectories: result.hasSubdirectories };
   }
 }
 

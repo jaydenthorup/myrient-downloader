@@ -38,7 +38,7 @@ class IpcManager {
     this.downloadManager = new DownloadManager(win, this.consoleService, downloadInfoService, downloadService);
 
     this.myrientDataManager = new MyrientDataManager(myrientService);
-    this.filterManager = new FilterManager();
+    this.filterManager = new FilterManager(null, this.myrientDataManager);
     this.downloadOperationManager = new DownloadOperationManager(win, this.downloadManager);
     this.filterPersistenceManager = new FilterPersistenceManager();
 

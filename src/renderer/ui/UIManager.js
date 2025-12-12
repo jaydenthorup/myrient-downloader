@@ -40,6 +40,7 @@ class UIManager {
     this.wizardManager = new WizardManager(this);
 
     this.downloadUI = null;
+    this.subTextTimer = null;
   }
 
   /**
@@ -56,8 +57,31 @@ class UIManager {
    * @memberof UIManager
    * @param {string} [text='Loading...'] The message to display alongside the spinner.
    */
-  showLoading(text = 'Loading...') {
-    document.getElementById('loading-text').textContent = text;
+  showLoading(text = 'Loading...', subText = '') {
+    const textContainerEl = document.getElementById('loading-text-container');
+    const textEl = document.getElementById('loading-text');
+    const subtextEl = document.getElementById('loading-subtext');
+
+    textEl.textContent = text;
+    textContainerEl.classList.remove('animate-slide-up-fast');
+    subtextEl.textContent = '';
+    subtextEl.classList.add('hidden');
+    subtextEl.classList.remove('animate-fade-in');
+
+    if (this.subTextTimer) {
+      clearTimeout(this.subTextTimer);
+      this.subTextTimer = null;
+    }
+
+    if (subText) {
+      this.subTextTimer = setTimeout(() => {
+        textContainerEl.classList.add('animate-slide-up-fast');
+        subtextEl.textContent = subText;
+        subtextEl.classList.remove('hidden');
+        subtextEl.classList.add('animate-fade-in');
+      }, 3000);
+    }
+
     document.getElementById('loading-spinner').classList.remove('hidden');
   }
 
@@ -67,6 +91,19 @@ class UIManager {
    */
   hideLoading() {
     document.getElementById('loading-spinner').classList.add('hidden');
+
+    if (this.subTextTimer) {
+      clearTimeout(this.subTextTimer);
+      this.subTextTimer = null;
+    }
+
+    const textContainerEl = document.getElementById('loading-text-container');
+    const subtextEl = document.getElementById('loading-subtext');
+
+    textContainerEl.classList.remove('animate-slide-up-fast');
+    subtextEl.textContent = '';
+    subtextEl.classList.add('hidden');
+    subtextEl.classList.remove('animate-fade-in');
   }
 
   /**
@@ -226,7 +263,7 @@ class UIManager {
         };
 
         try {
-          this.showLoading('Filtering files...');
+          this.showLoading('Applying filters...', 'Depending on how many files the directory contains this can take some time.');
           await filterService.runFilter(filters);
           if (stateService.get('finalFileList').length === 0) {
             this.hideLoading();
