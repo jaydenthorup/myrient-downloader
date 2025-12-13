@@ -20,9 +20,12 @@ import PresetsManager from './managers/PresetsManager.js';
  * The instance of DownloadUI, initialized after DOM content is loaded.
  * @type {DownloadUI}
  */
+import ModalManager from './managers/ModalManager.js';
+
 let downloadUI;
 let presetsManager;
 let uiManager;
+let consecutiveErrorCount = 0; // Initialize consecutive error count for directory loading
 
 document.addEventListener('DOMContentLoaded', async () => {
   /**
@@ -57,6 +60,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const fullUrl = url ? new URL(path, stateService.get('baseUrl')).href : stateService.get('baseUrl');
 
       const content = await myrientDataService.loadDirectory(fullUrl);
+      stateService.set('consecutiveLoadFailures', 0); // Reset on success
       if (content.directories.length === 0 && directoryStack.length > 0) {
         stateService.set('downloadFromHere', false); // User drilled into a leaf directory
         handleDirectorySelect(directoryStack[directoryStack.length - 1]);
@@ -82,10 +86,42 @@ document.addEventListener('DOMContentLoaded', async () => {
           downloadBtn.classList.add('hidden');
         }
         uiManager.hideLoading();
+        consecutiveErrorCount = 0; // Reset consecutive error count on success
       }
     } catch (e) {
-      alert(`Error: ${e.message}`);
-      uiManager.hideLoading();
+      consecutiveErrorCount++; // Increment error count on failure
+      uiManager.hideLoading(); // Hide loading indicator in any case
+
+      let modalTitle = 'Failed to Load Directory';
+      let modalText = 'The directory listing failed to load. Please ensure you have an active internet connection and try again.';
+
+      // Determine modal options based on consecutive error count
+      const modalOptions = {
+        title: modalTitle,
+        confirmText: 'Retry',
+        cancelText: null, // Default to no cancel button
+        dismissOnOverlayClick: false // Prevent closing on overlay click
+      };
+
+      if (consecutiveErrorCount >= 3) {
+        modalText += '<br><br>If you continue to see this error then Myrient may restrict access in your country or you could be getting blocked by your firwall, router or internet service provider. Please try using a desktop VPN to resolve the issue.';
+        modalOptions.cancelText = 'Close App';
+        modalOptions.cancelClass = 'btn-danger';
+      }
+
+      // Show the modal and handle the promise result
+      const confirmed = await uiManager.showConfirmationModal(modalText, modalOptions);
+
+      if (confirmed) {
+        // 'Retry' was clicked
+        // Add a small delay to allow the modal to visually close before retrying
+        setTimeout(() => {
+          loadDirectory(url); // Pass the original 'url' argument for retry
+        }, 300);
+      } else if (confirmed === false && consecutiveErrorCount >= 2) {
+        // 'Close App' was clicked
+        windowService.closeWindow();
+      }
     }
   }
 
@@ -137,29 +173,56 @@ document.addEventListener('DOMContentLoaded', async () => {
           uiManager.hideLoading();
         }, 0);
       } else { // Handles null (dismissed)
-        const fromDownloadFromHere = stateService.get('downloadFromHere');
-        if (fromDownloadFromHere) {
-          stateService.set('downloadFromHere', false); // Reset flag
-          uiManager.hideLoading();
-          return; // Stay on the current directory view
-        }
-
+        // If the wizard is dismissed, the directoryStack is "ahead" of the displayed content.
+        // We need to revert the directoryStack to its previous state.
         const currentStack = stateService.get('directoryStack') || [];
         if (currentStack.length > 0) {
           const newStack = currentStack.slice(0, currentStack.length - 1);
           stateService.setDirectoryStack(newStack);
-          stateService.resetWizardState();
-          const url = newStack.length > 0 ? newStack.map(item => item.href).join('') : undefined;
-          loadDirectory(url);
+          uiManager.breadcrumbManager.updateBreadcrumbs(); // Refresh breadcrumbs to reflect the reverted stack
         }
+        uiManager.hideLoading();
+        return;
       }
     } catch (e) {
-      uiManager.hideLoading();
-      alert(`Error: ${e.message}`);
-      // Go back to the previous directory view on error
-      const currentStack = stateService.get('directoryStack') || [];
-      const url = currentStack.length > 0 ? currentStack.map(i => i.href).join('') : undefined;
-      loadDirectory(url);
+      const currentFailures = stateService.get('consecutiveLoadFailures');
+      stateService.set('consecutiveLoadFailures', currentFailures + 1);
+
+      let modalTitle = 'Failed to Process Directory';
+      let modalMessage = `An error occurred while processing the directory: ${e.message}. Please try again.`;
+      let modalConfirmText = 'Retry';
+      let modalCancelText = null;
+      let modalConfirmClass = 'btn-success';
+
+      if (stateService.get('consecutiveLoadFailures') >= 2) {
+        modalMessage += '\n\nIf this error persists, there might be an issue with the directory\'s content or Myrient\'s service availability. Consider trying a different directory or checking your network connection.';
+        modalCancelText = 'Close App';
+      }
+
+      const confirmed = await uiManager.showConfirmationModal(modalMessage, {
+        title: modalTitle,
+        confirmText: modalConfirmText,
+        cancelText: modalCancelText,
+        confirmClass: modalConfirmClass,
+        dismissOnOverlayClick: false // Prevent closing on overlay click
+      });
+
+      if (confirmed) {
+        // User clicked Retry
+        loadDirectory(url);
+      } else if (confirmed === false && stateService.get('consecutiveLoadFailures') >= 2) {
+        // User clicked Close App after multiple failures
+        windowService.closeWindow();
+      } else {
+        // User clicked cancel on first error or dismissed modal
+        // Navigate back to the previous directory without re-attempting loadDirectory
+        const currentStack = stateService.get('directoryStack') || [];
+        const newStack = currentStack.slice(0, currentStack.length - 1);
+        stateService.setDirectoryStack(newStack);
+        stateService.resetWizardState();
+        const prevUrl = newStack.length > 0 ? newStack.map(item => item.href).join('') : undefined;
+        // Do NOT call loadDirectory(prevUrl) here. The UI will update to the previous breadcrumbs.
+      }
     }
   }
 

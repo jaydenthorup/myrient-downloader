@@ -38,6 +38,7 @@ import { parseSize } from '../shared/utils/formatters.js';
  * @property {number} state.throttleSpeed The speed for download throttling.
  * @property {string} state.throttleUnit The unit for download throttling speed.
  * @property {Array<object>} state.savedFilters The list of saved filter presets.
+ * @property {number} state.consecutiveLoadFailures The number of consecutive failed attempts to load a directory.
  */
 class StateService {
   /**

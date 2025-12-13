@@ -182,18 +182,18 @@ input[type="number"] {
 }
 
 .overlay-transition {
+  @apply fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50;
   opacity: 0;
-  visibility: hidden;
+  pointer-events: none; /* Disable interaction when hidden */
+  transition: opacity 300ms ease-in-out;
   backdrop-filter: blur(0);
   will-change: opacity;
-  transition: opacity 300ms ease-in-out, visibility 0s linear 300ms;
 }
 
 .overlay-transition.open {
   opacity: 1;
-  visibility: visible;
+  pointer-events: auto; /* Enable interaction when open */
   backdrop-filter: blur(4px);
-  transition-delay: 0s;
 }
 
 .modal-transition {

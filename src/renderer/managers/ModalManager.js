@@ -42,7 +42,8 @@ class ModalManager {
       confirmText = 'Continue',
       cancelText = 'Cancel',
       confirmClass = 'btn-success',
-      cancelClass = 'btn-secondary'
+      cancelClass = 'btn-secondary',
+      dismissOnOverlayClick = true // New option
     } = options;
 
     if (this.settingsButton) {
@@ -50,7 +51,7 @@ class ModalManager {
     }
 
     this.modalTitle.textContent = title;
-    this.modalMessage.textContent = message;
+    this.modalMessage.innerHTML = message;
 
     this.continueBtn.textContent = confirmText;
     this.continueBtn.className = `btn ${confirmClass}`;
@@ -86,7 +87,9 @@ class ModalManager {
         }
         this.continueBtn.removeEventListener('click', handleContinue);
         this.cancelBtn.removeEventListener('click', handleCancel);
-        this.modal.removeEventListener('click', handleOverlayClick);
+        if (dismissOnOverlayClick) { // Only remove if it was added
+          this.modal.removeEventListener('click', handleOverlayClick);
+        }
         this.modal.removeEventListener('keydown', modalKeyboardNavigator.handleModalKeyDown.bind(modalKeyboardNavigator));
         resolve(result);
       };
@@ -102,7 +105,9 @@ class ModalManager {
 
       this.continueBtn.addEventListener('click', handleContinue);
       this.cancelBtn.addEventListener('click', handleCancel);
-      this.modal.addEventListener('click', handleOverlayClick);
+      if (dismissOnOverlayClick) { // Only add if dismissal on overlay click is allowed
+        this.modal.addEventListener('click', handleOverlayClick);
+      }
       this.modal.addEventListener('keydown', modalKeyboardNavigator.handleModalKeyDown.bind(modalKeyboardNavigator));
     });
   }

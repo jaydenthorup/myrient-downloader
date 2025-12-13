@@ -183,7 +183,14 @@ class WizardManager {
 
     this.savePresetBtn.addEventListener('click', async () => {
       const presetName = this.savePresetNameInput.value.trim();
-      if (!presetName) return alert('Please enter a name for the preset.');
+      if (!presetName) {
+        await this.uiManager.showConfirmationModal('Please enter a name for the preset you wish to save.', {
+          title: 'Missing Preset Name',
+          confirmText: 'Ok',
+          cancelText: null
+        });
+        return;
+      }
 
       const directoryStack = stateService.get('directoryStack') || [];
       const fullPath = directoryStack.map(item => item.href).join('');
@@ -412,10 +419,10 @@ class WizardManager {
 
     const includeTags = new Set(stateService.get('includeTags')[category]);
     const excludeTags = new Set(stateService.get('excludeTags')[category]);
-  
+
     const tagsToUpdate = type === 'include' ? includeTags : excludeTags;
     const opposingTags = type === 'include' ? excludeTags : includeTags;
-  
+
     visibleTags.forEach(tagName => {
       if (shouldSelect) {
         if (!opposingTags.has(tagName)) {
@@ -425,10 +432,10 @@ class WizardManager {
         tagsToUpdate.delete(tagName);
       }
     });
-  
+
     stateService.get('includeTags')[category] = Array.from(includeTags);
     stateService.get('excludeTags')[category] = Array.from(excludeTags);
-  
+
     this._updateUIFromState();
   }
 

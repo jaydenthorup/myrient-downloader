@@ -281,7 +281,12 @@ class UIManager {
             searchInput.dispatchEvent(new Event('input'));
           }
         } catch (e) {
-          alert(`Error during filtering: ${e.message}`);
+          this.hideLoading(); // Ensure loading is hidden before showing modal
+          await this.showConfirmationModal(`Error during filtering: ${e.message}`, {
+            title: 'Filtering Failed',
+            confirmText: 'Ok',
+            cancelText: null // No cancel button, only Ok
+          });
         } finally {
           this.hideLoading();
         }
