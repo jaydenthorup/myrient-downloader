@@ -21,6 +21,8 @@ import PresetsManager from './managers/PresetsManager.js';
  * @type {DownloadUI}
  */
 let downloadUI;
+let presetsManager;
+let uiManager;
 
 document.addEventListener('DOMContentLoaded', async () => {
   /**
@@ -28,11 +30,13 @@ document.addEventListener('DOMContentLoaded', async () => {
    * Sets up UI managers, loads initial data, and registers event listeners.
    */
 
-  const presetsManager = new PresetsManager(document.getElementById('presets-content'), stateService);
-  const uiManager = new UIManager(document.getElementById('view-container'), loadDirectory, presetsManager);
+  presetsManager = new PresetsManager(document.getElementById('presets-content'), stateService);
+  uiManager = new UIManager(document.getElementById('view-container'), loadDirectory, presetsManager);
   presetsManager.setUIManager(uiManager);
   presetsManager.addEventListeners();
   await presetsManager.loadPresets();
+  presetsManager.renderPresets();
+  presetsManager.initializePresetsTooltips();
   downloadUI = new DownloadUI(stateService, downloadService, uiManager);
   uiManager.setDownloadUI(downloadUI);
   await uiManager.viewManager.loadViews();
@@ -235,9 +239,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     presetsOverlay.classList.add('open');
     presetsBtn.classList.add('presets-open');
     settingsManager.closeSettings();
-    presetsManager.loadPresets();
-    presetsManager.renderPresets();
-    presetsManager.initializePresetsTooltips();
   }
 
   /**
