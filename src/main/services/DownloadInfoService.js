@@ -202,7 +202,7 @@ class DownloadInfoService {
           filesToDownload.push(fileInfo);
         }
       } catch (e) {
-        skippedFiles.push(`${filename} (Scan failed)`);
+        skippedFiles.push(`${filename} (Scan failed for URL ${fileUrl}: ${JSON.stringify(e)})`);
         fileInfo.skip = true;
       }
       win.webContents.send('download-scan-progress', { current: i + 1, total: allFilesToProcess.length });

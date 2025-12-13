@@ -124,7 +124,12 @@ class DownloadManager {
         } else if (scanResult.skippedBecauseDownloadedCount === files.length) {
           summaryMessage = "All files already downloaded!";
         } else {
-          summaryMessage = "All matched files already exist locally. Nothing to download.";
+          const scanFailedFiles = scanResult.skippedFiles.filter(f => typeof f === 'string' && f.includes('Scan failed'));
+          if (scanFailedFiles.length > 0) {
+            summaryMessage = `Scan failed for ${scanFailedFiles.length} file(s). First error: ${scanFailedFiles[0]}`;
+          } else {
+            summaryMessage = "All matched files already exist locally. Nothing to download.";
+          }
         }
       } else {
         const remainingSize = totalSize - skippedSize;

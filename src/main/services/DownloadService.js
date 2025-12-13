@@ -251,7 +251,7 @@ class DownloadService {
           throw e;
         }
 
-        this.downloadConsole.logError(`Failed to download ${filename}. ${e.message}`);
+        this.downloadConsole.logError(`Failed to download ${filename}. Error: ${JSON.stringify(e)}`);
         skippedFiles.push(filename);
 
         totalDownloaded -= fileDownloaded;

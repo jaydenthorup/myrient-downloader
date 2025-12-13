@@ -53,14 +53,13 @@ class DownloadService {
    * @param {Array<object>} files An array of file objects to download. Each object should contain properties like `name`, `href`, `size`, `type`, `relativePath`.
    */
   startDownload(files) {
-    const archiveHref = stateService.get('archive').href;
-    const directoryHref = stateService.get('directory').href;
-    const path = archiveHref === directoryHref ? archiveHref : archiveHref + directoryHref;
+    const directoryStack = stateService.get('directoryStack') || [];
+    const path = directoryStack.map(item => item.href).join('');
     const baseUrl = new URL(path, stateService.get('baseUrl')).href;
     const createSubfolder = stateService.get('createSubfolder');
     const maintainFolderStructure = stateService.get('maintainFolderStructure');
-    const extractAndDelete = stateService.get('extractAndDelete');
-    const extractPreviouslyDownloaded = stateService.get('extractPreviouslyDownloaded');
+    const extractAndDelete = document.getElementById('extract-archives-checkbox')?.checked;
+    const extractPreviouslyDownloaded = document.getElementById('extract-previously-downloaded-checkbox')?.checked;
     const skipScan = document.getElementById('skip-scan-checkbox').checked;
     const isThrottlingEnabled = stateService.get('isThrottlingEnabled');
     const throttleSpeed = stateService.get('throttleSpeed');
