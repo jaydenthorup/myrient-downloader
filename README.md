@@ -21,13 +21,15 @@ Please consider donating to support my work and Myrient's service.
 
 The Myrient Downloader provides a seamless process for creating curated game collections:
 1.  **Browse and Select:** Allows users to easily browse and search the entire Myrient catalog of archives (e.g., No-Intro, MAME) and drill down into specific systems or categories.
+    * **Download Anywhere:** Download from the directory of your choice, recursively finding all files beneath your chosen directory.
+    * **See Files:** See and search the files at your currently selected directory so you know what you will be downloading when you click "Download from Here".
 2.  **Optionally Filter and Curate:** Presents a powerful wizard to filter thousands of files down to a specific list based on custom rules:
     * **Include/Exclude Tags:** Filter files by region or language tag (e.g., keep only `(USA)`).
     * **Revision Control:** Automatically select only the single highest revision of every game title.
     * **Multi-Disc/Cart:** Automatically download all discs or cartridges for a given title.
     * **Priority De-duplication:** Allows the user to build a priority list of tags to select the *best* version when multiple unique copies of a game exist.
     * **Include/Exclude String Filters:** Create custom lists of strings to match titles to include and exclude.
-    * **Save/Import/Export Filtering Presets:** Save your filtering options as presets to re-use them or share them with friends. All filtering options are included.
+    * **Save/Import/Export Filtering Presets:** Save your filtering options as presets to re-use them or share them with friends. All filtering options are included and work at every directory level.
     * **Skip The Filtering:** Don't need to filter? Go ahead and skip it! Archives that don't support tags will skip the filtering automatically.
 3.  **Download:** Executes the download of the final, filtered list of files.
     * **Include/Exclude Individual Titles:** Toggle download for titles on and off individually.
@@ -44,17 +46,22 @@ The Myrient Downloader provides a seamless process for creating curated game col
    * **Settings Menu:** A settings menu lets you check for updates and adjust application zoom levels for better support across a variety of displays.
    * **Keyboard Navigation:** Using your arrow keys and enter you can navigate many of the UI elements quickly and efficiently.
    * **Toast Notification:** Little pop-ups that confirm whether actions were successful or unsuccessful.
+   * **Seasonal Effects:** Optional effects you can toggle on at various times of year.
 
 *And much, much more...*
   
 ***
 
 ## Screenshots
-![Archive Selection](screenshots/select-archive.png)
-*Select your archive.*
-
 ![Directory Selection](screenshots/select-directory.png)
 *Select your directory.*
+
+![Directory Selection Levels](screenshots/select-directory-2.png)
+*Navigate through the directory tree to any level.*
+
+![Directory Selection File Preview](screenshots/select-directory-3.png)
+*Preview directories and files at your current level.*
+
 
 ![Filtering Wizard (1/3)](screenshots/filtering-wizard-1.png)
 *Load a Preset or Include/exclude tags.*
