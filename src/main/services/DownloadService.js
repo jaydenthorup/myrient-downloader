@@ -161,6 +161,7 @@ class DownloadService {
             bytesPerSecond = throttleSpeed * 1024 * 1024;
           }
           const throttle = new Throttle({ rate: bytesPerSecond });
+          response.data.on('error', err => throttle.emit('error', err));
           stream = response.data.pipe(throttle);
         }
 
@@ -186,14 +187,8 @@ class DownloadService {
           };
 
           stream.on('data', (chunk) => {
-            if (this.isCancelled()) {
-              response.request.abort();
-              cleanupAndReject("CANCELLED_MID_FILE");
-              return;
-            }
             fileDownloaded += chunk.length;
             totalDownloaded += chunk.length;
-            writer.write(chunk);
 
             const now = performance.now();
             if (now - lastDownloadProgressUpdateTime > 100 || fileDownloaded === fileSize) {
@@ -214,10 +209,6 @@ class DownloadService {
             }
           });
 
-          stream.on('end', () => {
-            writer.end();
-          });
-
           writer.on('finish', () => {
             fs.rename(partPath, targetPath, (err) => {
               if (err) {
@@ -234,16 +225,20 @@ class DownloadService {
               resolve();
             });
           });
+
           writer.on('error', (err) => {
             reject(err);
           });
+
           stream.on('error', (err) => {
-            if (this.isCancelled()) {
+            if (err.name === 'CanceledError' || this.isCancelled()) {
               cleanupAndReject("CANCELLED_MID_FILE");
             } else {
               reject(err);
             }
           });
+
+          stream.pipe(writer);
         });
 
       } catch (e) {
