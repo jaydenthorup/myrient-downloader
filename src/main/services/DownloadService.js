@@ -168,21 +168,14 @@ class DownloadService {
         await new Promise((resolve, reject) => {
           const cleanupAndReject = (errMessage) => {
             writer.close(() => {
-              if (fs.existsSync(partPath)) {
-                this.downloadConsole.log(`Cleaning up partial file: ${filename}`);
-                fs.unlink(partPath, (unlinkErr) => {
-                  if (unlinkErr) {
-                    console.error(`Failed to delete partial file: ${partPath}`, unlinkErr);
-                  }
-                  const err = new Error(errMessage);
-                  err.partialFile = { path: partPath, name: filename };
-                  reject(err);
-                });
-              } else {
+              fs.unlink(partPath, (unlinkErr) => {
+                if (unlinkErr && unlinkErr.code !== 'ENOENT') {
+                  console.error(`Failed to delete partial file: ${partPath}`, unlinkErr);
+                }
                 const err = new Error(errMessage);
                 err.partialFile = { path: partPath, name: filename };
                 reject(err);
-              }
+              });
             });
           };
 
