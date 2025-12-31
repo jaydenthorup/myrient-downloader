@@ -55,10 +55,33 @@ jobs:
             fi
           fi
 
-          exec_name=$(find "${{ env.RELEASE_DIR }}" -maxdepth 1 -type f \( -name '*.AppImage' -o -name '*.exe' -o -name '*.dmg' \) -exec basename {} \;)
-          echo "ARTIFACT_NAME=${exec_name}-${{ matrix.arch }}" >> "$GITHUB_ENV"
-          echo "FILENAME=${{ env.RELEASE_DIR }}/$exec_name" >> "$GITHUB_ENV"
+          # Capture any produced artifact (AppImage, exe, dmg)
+          artifact_path=$(find "${{ env.RELEASE_DIR }}" -maxdepth 1 -type f \( -name '*.AppImage' -o -name '*.exe' -o -name '*.dmg' \) -print -quit || true)
+          if [ -n "$artifact_path" ]; then
+            exec_name=$(basename "$artifact_path")
+            # Friendly app name and version from package.json
+            app_name=$(node -p "require('./package.json').build.productName.replace(/\s+/g,'.')")
+            version=$(node -p "require('./package.json').version")
+            # extension
+            ext="${exec_name##*.}"
+            # map runner name to friendly os label
+            OS="${{ matrix.os }}"
+            oslabel="unknown"
+            case "$OS" in
+              windows-*) oslabel="windows" ;;
+              ubuntu-*) oslabel="linux" ;;
+              macos-*) oslabel="macos" ;;
+              *) oslabel="$OS" ;;
+            esac
+            # Build artifact name: AppName.Version.OS.ARCH.ext (dots as separators)
+            art_name="${app_name}.${version}.${oslabel}.${{ matrix.arch }}.${ext}"
+            echo "ARTIFACT_NAME=${art_name}" >> "$GITHUB_ENV"
+            echo "FILENAME=${{ env.RELEASE_DIR }}/$exec_name" >> "$GITHUB_ENV"
+          else
+            echo "No artifact produced for os=${{ matrix.os }} arch=${{ matrix.arch }}"
+          fi
       - name: Upload artifact
+        if: env.FILENAME != ''
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.ARTIFACT_NAME }}
