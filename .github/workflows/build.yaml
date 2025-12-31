@@ -1,8 +1,17 @@
 name: Build and push artifacts
 on:
   push:
+    # keep tag trigger for releases
     tags:
       - '*'
+    # also build on pushes to main (and other branches if desired)
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  # allow manual runs from the Actions UI
+  workflow_dispatch:
 jobs:
   build:
     strategy:
@@ -18,6 +27,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v6
+        with:
+          node-version: '18'
+      - name: Cache node modules
+        uses: actions/cache@v4
+        with:
+          # cache npm cache to speed up installs across runs
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
       - name: Build executable
         run: |
           npm install
