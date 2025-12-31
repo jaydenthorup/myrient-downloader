@@ -18,6 +18,10 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
+        arch: [x64, ia32, arm64]
+        exclude:
+          - os: macos-latest
+            arch: ia32
     runs-on: ${{ matrix.os }}
     env:
       RELEASE_DIR: release
@@ -40,9 +44,35 @@ jobs:
       - name: Build executable
         run: |
           npm install
-          npm run build:all
+          # Run platform-specific build and pass architecture flags to electron-builder
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            if [ "${{ matrix.arch }}" = "ia32" ]; then
+              npm run build:win -- --ia32
+            elif [ "${{ matrix.arch }}" = "arm64" ]; then
+              npm run build:win -- --arm64
+            else
+              npm run build:win -- --x64
+            fi
+          elif [ "${{ matrix.os }}" = "macos-latest" ]; then
+            # mac: support x64 (intel) and arm64 (Apple Silicon)
+            if [ "${{ matrix.arch }}" = "arm64" ]; then
+              npm run build:mac -- --arm64
+            else
+              npm run build:mac -- --x64
+            fi
+          else
+            # linux
+            if [ "${{ matrix.arch }}" = "ia32" ]; then
+              npm run build:linux -- --ia32
+            elif [ "${{ matrix.arch }}" = "arm64" ]; then
+              npm run build:linux -- --arm64
+            else
+              npm run build:linux -- --x64
+            fi
+          fi
+
           exec_name=$(find "${{ env.RELEASE_DIR }}" -maxdepth 1 -type f \( -name '*.AppImage' -o -name '*.exe' -o -name '*.dmg' \) -exec basename {} \;)
-          echo "ARTIFACT_NAME=$exec_name" >> "$GITHUB_ENV"
+          echo "ARTIFACT_NAME=${exec_name}-${{ matrix.arch }}" >> "$GITHUB_ENV"
           echo "FILENAME=${{ env.RELEASE_DIR }}/$exec_name" >> "$GITHUB_ENV"
       - name: Upload artifact
         uses: actions/upload-artifact@v4
